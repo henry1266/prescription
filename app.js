@@ -1,11 +1,11 @@
 require("dotenv").config(); // Load environment variables from .env file
 
 const express = require("express");
-// const { ObjectId } = require("mongodb"); // ObjectId is now handled in appHelper
 const path = require("path");
 const http = require("http");
 const dbManager = require("./utils/database");
-const appHelper = require("./utils/appHelper"); // Import the new appHelper
+// const appHelper = require("./utils/appHelper"); // No longer needed, functionality moved to prescriptionService
+const prescriptionService = require("./services/prescriptionService"); // Import prescriptionService
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -82,15 +82,18 @@ app.use("/result", resultRouter);
 app.post("/delete/:id", async (req, res) => {
   const prescriptionId = req.params.id;
   try {
-    const result = await appHelper.deletePrescriptionById(prescriptionId);
-    if (result.deletedCount === 1) {
-      res.status(200).send({ message: "Prescription deleted successfully" });
-    } else {
-      res.status(404).send({ message: "Prescription not found" });
-    }
+    // Use prescriptionService for deletion
+    const result = await prescriptionService.deletePrescription(prescriptionId);
+    // The service now returns { success: true, message: "..." } or throws an error
+    res.status(200).send({ message: result.message }); 
   } catch (e) {
-    console.error("Error deleting prescription:", e);
-    res.status(500).send({ message: "Server error, unable to delete prescription" });
+    console.error("Error deleting prescription in app.js:", e.message);
+    // Check if it's a "not found" type error from the service
+    if (e.message.toLowerCase().includes("not found")) {
+        res.status(404).send({ message: e.message });
+    } else {
+        res.status(500).send({ message: e.message || "Server error, unable to delete prescription" });
+    }
   }
 });
 
@@ -98,7 +101,7 @@ async function startServer() {
   try {
     await dbManager.connectToServer();
     server.listen(port, () => {
-      console.log(`Server running at http://localhost:${port}`); // Added port to log
+      console.log(`Server running at http://localhost:${port}`);
     });
   } catch (err) {
     console.error("Failed to start server:", err);

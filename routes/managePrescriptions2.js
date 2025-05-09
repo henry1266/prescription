@@ -1,16 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const prescriptionHelper = require("../utils/prescriptionHelper");
+const prescriptionService = require("../services/prescriptionService");
 
 router.get("/", async (req, res) => {
     const pid = req.query.pid;
     try {
-        // Use the helper function, specify 'asc' for beforeToday sort order
-        const groupedPrescriptions = await prescriptionHelper.getProcessedPrescriptions(pid, "asc");
+        const groupedPrescriptions = await prescriptionService.getGroupedPrescriptions(pid, "asc"); // Specify sort 'asc'
         res.render("manageprescription2", { prescriptions: groupedPrescriptions });
     } catch (error) {
-        console.error("Error fetching prescriptions or patient data:", error);
-        res.status(500).send("Internal Server Error");
+        console.error("Error in GET /manageprescription2:", error.message);
+        res.status(500).send(error.message || "Internal Server Error");
     }
 });
 
@@ -18,25 +17,25 @@ router.post("/update_prei/:id", async (req, res) => {
     const prescriptionId = req.params.id;
     const { prei, check } = req.body;
     try {
-        const result = await prescriptionHelper.updatePreiStatus(prescriptionId, prei, check);
+        const result = await prescriptionService.updatePrescriptionStatus(prescriptionId, prei, check);
         res.json(result);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "更新失敗" });
+        console.error("Error in POST /manageprescription2/update_prei/:id:", err.message);
+        res.status(500).json({ error: err.message || "更新失敗" });
     }
 });
 
 router.post("/send_message", async (req, res) => {
     const { pline, panme, startdate, enddate, id, precount, check, prescriptionId } = req.body;
     try {
-        const result = await prescriptionHelper.sendLineNotification(pline, panme, startdate, enddate, id, precount, check, prescriptionId);
+        const result = await prescriptionService.sendPrescriptionNotification(pline, panme, startdate, enddate, id, precount, check, prescriptionId);
         res.json(result);
     } catch (error) {
-        console.error("推送訊息失敗:", error.response?.data || error.message);
-        if (error.message === "LINE ID or patient name cannot be empty." || error.message === "LINE_ACCESS_TOKEN is not defined in environment variables.") {
+        console.error("Error in POST /manageprescription2/send_message:", error.message);
+        if (error.message.includes("LINE ID or patient name cannot be empty") || error.message.includes("LINE_ACCESS_TOKEN is not configured")) {
             res.status(400).json({ error: error.message }); 
         } else {
-            res.status(500).json({ error: "推送訊息失敗" });
+            res.status(500).json({ error: error.message || "推送訊息失敗" });
         }
     }
 });

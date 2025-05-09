@@ -1,28 +1,22 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const client = require('../utils/db'); // MongoDB client
-
+const dbManager = require("../utils/database"); // Use the new database manager
 
 // POST route to handle form submission
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    console.log('Connecting to MongoDB...');
-    await client.connect();
-    const db = client.db("inventory");
+    const db = dbManager.getDb("inventory"); // Get 'inventory' DB instance
     const order = req.body;
 
-    console.log('Inserting order into MongoDB:', order);
     await db.collection("purchaseOrders").insertOne(order);
 
-    console.log('Order inserted successfully');
-    res.render('ordersresult', { order });
+    res.render("ordersresult", { order });
   } catch (error) {
-    console.error('Error occurred:', error);
+    console.error("Error occurred in POST /ordersresult:", error);
     res.status(500).json({ error: error.message });
-  } finally {
-    console.log('Closing MongoDB connection...');
-    await client.close();
   }
+  // No client.close() here, connection is managed centrally
 });
 
 module.exports = router;
+

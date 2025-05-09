@@ -1,48 +1,60 @@
 // utils/database.js
 const { MongoClient } = require("mongodb");
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.DB_NAME; // Default database name
 
-// Configuration will be read from environment variables later
-// For now, use a placeholder or a default development URI
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017"; 
-const dbName = process.env.DB_NAME || "pharmacy";
+let client;
+let dbInstance; // Holds the default database instance
 
-const client = new MongoClient(uri, {
-  useNewUrlParser: true, // Although deprecated, good to be aware if older examples are seen
-  useUnifiedTopology: true, // Ensures use of the new Server Discover and Monitoring engine
-});
+module.exports = {
+  connectToServer: async function() {
+    if (!uri) {
+      throw new Error("MONGODB_URI not defined in .env file");
+    }
+    // dbName is for the default database, can be omitted if only specific dbs are used via getDb(name)
+    // However, good to have a default defined for general use.
+    if (!dbName) {
+      console.warn("DB_NAME for default database not defined in .env file. Only specific databases can be accessed via getDb(specificName).");
+    }
+    client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+    try {
+      await client.connect();
+      if (dbName) {
+        dbInstance = client.db(dbName); // Initialize default DB instance
+        console.log(`Successfully connected to MongoDB and default database set to: ${dbInstance.databaseName}`);
+      } else {
+        console.log("Successfully connected to MongoDB. No default DB_NAME specified, use getDb(specificName) to access databases.");
+      }
+    } catch (err) {
+      console.error("Failed to connect to MongoDB", err);
+      throw err;
+    }
+  },
 
-let dbInstance = null;
-
-async function connectToServer() {
-  if (dbInstance) {
-    console.log("Database already connected.");
+  getDb: function(specificDbName) {
+    if (!client || !client.topology || !client.topology.isConnected()) {
+        throw new Error("MongoDB client not connected. Call connectToServer first.");
+    }
+    if (specificDbName) {
+        return client.db(specificDbName);
+    }
+    // If no specificDbName, return the default initialized dbInstance
+    if (!dbInstance) {
+        if (dbName) { // If default dbName was defined but instance is missing (should not happen after connectToServer)
+             console.warn("Default dbInstance was not initialized correctly, attempting to get default DB again.");
+             return client.db(dbName);
+        }
+        throw new Error("Default database instance not available (and no specificDbName provided). Ensure DB_NAME is in .env or provide a specificDbName.");
+    }
     return dbInstance;
-  }
-  try {
-    await client.connect();
-    console.log("Successfully connected to MongoDB server.");
-    dbInstance = client.db(dbName);
-    return dbInstance;
-  } catch (err) {
-    console.error("Failed to connect to MongoDB", err);
-    // Exit process with failure in a real app, or handle more gracefully
-    process.exit(1);
-  }
-}
+  },
 
-function getDb() {
-  if (!dbInstance) {
-    throw new Error("Database not initialized. Call connectToServer first.");
+  closeConnection: async function() {
+    if (client) {
+      await client.close();
+      console.log("MongoDB connection closed.");
+      client = null;
+      dbInstance = null;
+    }
   }
-  return dbInstance;
-}
-
-async function closeConnection() {
-  if (client && client.topology && client.topology.isConnected()) {
-    await client.close();
-    console.log("MongoDB connection closed.");
-  }
-}
-
-module.exports = { connectToServer, getDb, closeConnection };
-
+};

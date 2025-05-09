@@ -1,37 +1,35 @@
-const express = require('express');
+const express = require(\'express\');
 const router = express.Router();
-const formatDate = require('../utils/formatDate'); // 假設 formatDate 在上層目錄
-const client = require('../utils/db'); // 引入 MongoDB 客戶端
+const formatDate = require(\'../utils/formatDate\'); // Assuming formatDate is in the parent directory
+const dbManager = require(\'../utils/database\'); // Use the new database manager
 
-router.get('/', async (req, res) => {
-  const selectedDate1 = req.query.predate; // 從查詢參數獲取日期
+router.get(\'/\', async (req, res) => {
+  const selectedDate1 = req.query.predate; // Get date from query parameters
   if (!selectedDate1) {
-    return res.status(400).send("缺少必要的日期參數 predate");
+    return res.status(400).send(\"Missing necessary date parameter predate\");
   }
 
   const formattedDate1 = formatDate(selectedDate1);
 
   try {
-    await client.connect();
-    const db = client.db("pharmacy");
-    const prescriptionsCollection = db.collection("prescriptions");
+    const db = dbManager.getDb(); // Get DB instance from manager
+    const prescriptionsCollection = db.collection(\"prescriptions\");
 
-    // 查詢當日的所有來客時間
+    // Query all customer arrival times for the day
     const prescriptions = await prescriptionsCollection
       .find({ predate: formattedDate1 })
-      .project({ presec: 1 }) // 只提取 presec 欄位
+      .project({ presec: 1 }) // Only extract the presec field
       .toArray();
 
-    // 提取時間數據
+    // Extract time data
     const times = prescriptions.map(prescription => prescription.presec);
-    console.log( formattedDate1);
-    res.render('customerTimeChart', { times, formattedDate1 });
+    console.log(formattedDate1);
+    res.render(\'customerTimeChart\', { times, formattedDate1 });
   } catch (e) {
-    console.error("查詢資料時出錯:", e);
-    res.status(500).send("查詢失敗");
-  } finally {
-    await client.close();
+    console.error(\"Error querying data:\", e);
+    res.status(500).send(\"Query failed\");
   }
+  // No client.close() here, connection is managed centrally
 });
 
 module.exports = router;

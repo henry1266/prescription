@@ -1,11 +1,10 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const client = require('../utils/db'); // 引入 MongoDB 客戶端
+const dbManager = require("../utils/database"); // Use the new database manager
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    await client.connect();
-    const db = client.db("pharmacy");
+    const db = dbManager.getDb(); // Get default DB instance (pharmacy)
     const patientsCollection = db.collection("patients");
     const prescriptionsCollection = db.collection("prescriptions");
 
@@ -14,10 +13,10 @@ router.get('/', async (req, res) => {
     const prescriptions = await prescriptionsCollection.find({ pid }).toArray();
     
     if (!patient) {
-      return res.render('result', { errorMessage: '没有找到相关患者信息' });
+      return res.render("result", { errorMessage: "没有找到相关患者信息" });
     }
 
-    res.render('result', {
+    res.render("result", {
       prescriptions,
       patient,
       pid: patient.pid,
@@ -27,15 +26,15 @@ router.get('/', async (req, res) => {
       pphone: patient.pphone,
       pline: patient.pline,
       pdetail: patient.pdetail,
-      errorMessage: prescriptions.length > 0 ? null : '没有找到相关处方信息',
+      errorMessage: prescriptions.length > 0 ? null : "没有找到相关处方信息",
     });
     
   } catch (error) {
-    console.error(error);
-    res.render('result', { errorMessage: '查询时出错' });
-  } finally {
-    await client.close();
+    console.error("Error in GET /result:", error);
+    res.render("result", { errorMessage: "查询时出错" });
   }
+  // No client.close() here, connection is managed centrally
 });
 
 module.exports = router;
+

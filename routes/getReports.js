@@ -1,10 +1,10 @@
 // routes/getReports.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const formatDate = require('../utils/formatDate'); // 假設 formatDate 在上層目錄
-const client = require('../utils/db'); // 引入 MongoDB 客戶端
+const formatDate = require("../utils/formatDate"); // Assuming formatDate is in the parent directory
+const dbManager = require("../utils/database"); // Use the new database manager
 
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   const startDate = formatDate(req.body.startDate);
   const endDate = formatDate(req.body.endDate);
 
@@ -13,19 +13,16 @@ router.post('/', async (req, res) => {
   let belowyy = 0;
 
   try {
-    await client.connect();
-    const db = client.db('pharmacy');
-    const reportsCollection = db.collection('reports');
-    const patientsCollection = db.collection('patients');
-    const testsCollection = db.collection('tests');
+    const db = dbManager.getDb(); // Get DB instance from manager
+    const reportsCollection = db.collection("reports");
+    const patientsCollection = db.collection("patients");
+    const testsCollection = db.collection("tests");
 
-    // 查詢指定日期範圍內的報告數據
     reports = await reportsCollection.find({
       rdate: { $gte: startDate, $lte: endDate },
     }).toArray();
 
     for (let report of reports) {
-      // 查找病患信息
       const patient = await patientsCollection.findOne({ pid: report.pid });
       if (patient) {
         report.pname = patient.pname;
@@ -41,7 +38,6 @@ router.post('/', async (req, res) => {
         }
       }
 
-      // 遍歷 `test` 陣列中的每個 tinsuranceCode
       if (report.test && Array.isArray(report.test)) {
         for (let test of report.test) {
           if (test.tinsuranceCode) {
@@ -49,21 +45,20 @@ router.post('/', async (req, res) => {
             if (testData) {
               test.tname = testData.tname;
             } else {
-              test.tname = '未知檢測項目';
+              test.tname = "未知檢測項目";
             }
           }
         }
       }
     }
 
-    // 渲染報告頁面，傳遞報告數據
-    res.render('report', { reports, startDate, endDate, aboveyy, belowyy });
+    res.render("report", { reports, startDate, endDate, aboveyy, belowyy });
   } catch (e) {
-    console.error('查詢數據時出錯:', e);
-    res.status(500).send('伺服器錯誤，無法查詢報告');
-  } finally {
-    await client.close();
+    console.error("查詢數據時出錯:", e);
+    res.status(500).send("伺服器錯誤，無法查詢報告");
   }
+  // No client.close() here, connection is managed centrally
 });
 
 module.exports = router;
+

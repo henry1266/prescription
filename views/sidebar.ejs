@@ -55,12 +55,10 @@
     const year1 = today1.getFullYear();
     const month1 = String(today1.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，+1，并保证是两位数
     const day1 = String(today1.getDate()).padStart(2, '0'); // 保证是两位数
-    const baseUrl = "http://192.168.68.79:3001/dashboard";
+    // Use environment variables passed from app.js
+    const baseUrl = `http://<%= BACKEND_IP %>:<%= PORT %>/dashboard`;
     const dynamicUrl = `${baseUrl}/${year1}/${month1}`;
     
-    //const formattedDate = `${year1}-${month1}-${day1}`;
-    // 將 URL 設置到超連結
-
 </script>
 
 <!-- 導航欄 -->
@@ -99,10 +97,7 @@ document.getElementById('searchForm').addEventListener('submit', async function(
   if (result.errorMessage) {
     alert(result.errorMessage);
   } else {
-    // 将查询结果存储在本地存储中
     localStorage.setItem('searchResult', JSON.stringify(result));
-    //alert('Stored search result: ' + JSON.stringify(result));
-    // 跳转到结果页面
     window.location.href = '/result';
   }
 });
@@ -127,7 +122,7 @@ document.getElementById('searchForm').addEventListener('submit', async function(
 </ul>
 </div>
 <script>
-    // 將 URL 設置到超連結
     const dynamicLink = document.getElementById("dynamic-link");
     dynamicLink.href = dynamicUrl;
-    </script>
+</script>
+

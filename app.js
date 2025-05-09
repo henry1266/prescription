@@ -4,11 +4,15 @@ const express = require("express");
 const path = require("path");
 const http = require("http");
 const dbManager = require("./utils/database");
-// const appHelper = require("./utils/appHelper"); // No longer needed, functionality moved to prescriptionService
-const prescriptionService = require("./services/prescriptionService"); // Import prescriptionService
+const prescriptionService = require("./services/prescriptionService");
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Make environment variables available to EJS templates
+app.locals.BACKEND_IP = process.env.BACKEND_IP || "localhost";
+app.locals.PORT = port; // Already defined, just making it explicit for templates
+app.locals.FRONTEND_IP = process.env.FRONTEND_IP; // If needed by any template
 
 const server = http.createServer(app);
 
@@ -82,13 +86,10 @@ app.use("/result", resultRouter);
 app.post("/delete/:id", async (req, res) => {
   const prescriptionId = req.params.id;
   try {
-    // Use prescriptionService for deletion
     const result = await prescriptionService.deletePrescription(prescriptionId);
-    // The service now returns { success: true, message: "..." } or throws an error
     res.status(200).send({ message: result.message }); 
   } catch (e) {
     console.error("Error deleting prescription in app.js:", e.message);
-    // Check if it's a "not found" type error from the service
     if (e.message.toLowerCase().includes("not found")) {
         res.status(404).send({ message: e.message });
     } else {
@@ -101,7 +102,7 @@ async function startServer() {
   try {
     await dbManager.connectToServer();
     server.listen(port, () => {
-      console.log(`Server running at http://localhost:${port}`);
+      console.log(`Server running at http://${app.locals.BACKEND_IP}:${port}`); // Use BACKEND_IP here for logging
     });
   } catch (err) {
     console.error("Failed to start server:", err);

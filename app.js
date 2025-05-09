@@ -47,6 +47,7 @@ const stockRouter = require("./routes/stock");
 const ganttRouter = require("./routes/gantt");
 const filterRouter = require("./routes/filter");
 const resultRouter = require("./routes/result");
+const prescriptionChartRouter = require("./routes/prescriptionChartRoute"); // Added new route
 
 app.get("/", (req, res) => {
   res.render("index");
@@ -82,6 +83,7 @@ app.use("/stock", stockRouter);
 app.use("/gantt", ganttRouter);
 app.use("/filter", filterRouter);
 app.use("/result", resultRouter);
+app.use("/prescriptionChart", prescriptionChartRouter); // Used new route
 
 app.post("/delete/:id", async (req, res) => {
   const prescriptionId = req.params.id;
@@ -102,7 +104,7 @@ async function startServer() {
   try {
     await dbManager.connectToServer();
     server.listen(port, () => {
-      console.log(`Server running at http://${app.locals.FRONTEND_IP}:${port}`); // Use FRONTEND_IP here for logging
+      console.log(`Server running at http://${app.locals.FRONTEND_IP || 'localhost'}:${port}`); // Use FRONTEND_IP or fallback
     });
   } catch (err) {
     console.error("Failed to start server:", err);

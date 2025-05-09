@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>每日總處方數圖表分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1, h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; margin-top: 15px; width: auto; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { padding: 8px 15px; cursor: pointer; }
+        .error-message { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>每日總處方數分析儀表板</h1>
+
+    <h2>📅 篩選日期範圍 (圖表與下方表格將連動)</h2>
+    <label for="startDate">起始日期：</label>
+    <input type="date" id="startDate">
+    <label for="endDate">結束日期：</label>
+    <input type="date" id="endDate">
+    <button onclick="applyFilters()">篩選</button>
+
+    <h2>📈 每日總處方數（多線折線圖）</h2>
+    <div style="position: relative; height:550px; width:100%">
+        <canvas id="calendarChart"></canvas>
+    </div>
+
+    <h2>📅 每日總處方數統計 (根據上方日期篩選)</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>日期 (YYYY-MM-DD)</th>
+                <th>總處方筆數</th>
+            </tr>
+        </thead>
+        <tbody id="calendar-table-body">
+            <% if (typeof calendar !== 'undefined' && calendar.length > 0) { %>
+                <% calendar.forEach(entry => { %>
+                    <tr>
+                        <td><%= entry.date %></td>
+                        <td><%= entry.count %></td>
+                    </tr>
+                <% }); %>
+            <% } else { %>
+                <tr><td colspan="2">無日曆資料。</td></tr>
+            <% } %>
+        </tbody>
+    </table>
+
+<script>
+const calendarData = <%- typeof calendar !== 'undefined' ? JSON.stringify(calendar) : '[]' %>;
+
+// --- Chart Data Preparation ---
+console.log("Daily Total Calendar Data for Chart:", calendarData);
+let labels = calendarData.map(entry => entry.date);
+let rawData = calendarData.map(entry => entry.count);
+console.log("Chart Labels:", labels);
+console.log("Chart Raw Data:", rawData);
+
+// --- Chart Helper Functions (Moving Average, Rolling Slope) ---
+function movingAverage(data, windowSize = 7) {
+    const result = [];
+    if (!data || data.length === 0) return result;
+    for (let i = 0; i < data.length; i++) {
+        if (i < windowSize - 1) {
+            result.push(null);
+        } else {
+            const subset = data.slice(i - windowSize + 1, i + 1);
+            const sum = subset.reduce((a, b) => (a || 0) + (b || 0), 0);
+            result.push(sum / windowSize);
+        }
+    }
+    return result;
+}
+
+function rollingSlope(data, windowSize = 7) {
+    const result = Array(data?.length || 0).fill(null);
+     if (!data || data.length < windowSize) return result;
+    for (let i = 0; i <= data.length - windowSize; i++) {
+        const x = Array.from({ length: windowSize }, (_, k) => k);
+        const y = data.slice(i, i + windowSize);
+        if (y.some(val => typeof val !== 'number' || isNaN(val))) continue;
+
+        const meanX = (windowSize - 1) / 2;
+        const meanY = y.reduce((a, b) => a + b, 0) / windowSize;
+        let num = 0, den = 0;
+        for (let k = 0; k < windowSize; k++) {
+            num += (x[k] - meanX) * (y[k] - meanY);
+            den += (x[k] - meanX) ** 2;
+        }
+        const slope = den === 0 ? 0 : num / den;
+        result[i + Math.floor(windowSize / 2)] = slope;
+    }
+    return result;
+}
+
+// --- Chart Initialization ---
+let chart;
+const ctx = document.getElementById('calendarChart')?.getContext('2d');
+if (ctx) {
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '區域顏色依斜率變化',
+                    data: rawData,
+                    borderColor: 'transparent',
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    fill: true,
+                    pointRadius: 0,
+                    segment: {
+                        backgroundColor: ctx => {
+                            const index = ctx.p1DataIndex;
+                            const slopeValues = rollingSlope(rawData);
+                            const slopeValue = slopeValues[index];
+                            if (slopeValue === null || typeof slopeValue === 'undefined') return 'rgba(128, 128, 128, 0.1)';
+                            if (slopeValue > 0) return 'rgba(0, 128, 0, 0.2)';
+                            if (slopeValue < 0) return 'rgba(255, 0, 0, 0.2)';
+                            return 'rgba(128, 128, 128, 0.2)';
+                        }
+                    },
+                    hidden: false,
+                    order: 4
+                },
+                {
+                    label: '原始資料 (每日總處方數)',
+                    data: rawData,
+                    borderColor: 'purple',
+                    backgroundColor: 'rgba(128, 0, 128, 0.1)',
+                    fill: false,
+                    hidden: false,
+                    order: 1
+                },
+                {
+                    label: '7日移動平均',
+                    data: movingAverage(rawData),
+                    borderColor: 'teal',
+                    backgroundColor: 'rgba(0, 128, 128, 0.1)',
+                    fill: false,
+                    hidden: false,
+                    order: 2
+                },
+                {
+                    label: '7日局部斜率',
+                    data: rollingSlope(rawData),
+                    borderColor: 'gray',
+                    fill: false,
+                    hidden: false,
+                    segment: {
+                        borderColor: ctx => {
+                            const value = ctx.p1.parsed.y;
+                            if (value === null || typeof value === 'undefined') return 'rgba(128, 128, 128, 0.5)';
+                            if (value > 0) return 'green';
+                            if (value < 0) return 'red';
+                            return 'gray';
+                        }
+                    },
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    order: 3,
+                    yAxisID: 'ySlope'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '每日總處方筆數' },
+                    position: 'left',
+                },
+                ySlope: {
+                    title: { display: true, text: '7日局部斜率值' },
+                    position: 'right',
+                    grid: { drawOnChartArea: false }
+                },
+                x: {
+                    title: { display: true, text: '日期' }
+                }
+            },
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: 'index', intersect: false }
+            }
+        }
+    });
+} else {
+    console.error('Canvas context not found');
+}
+
+// --- Filtering Logic ---
+async function applyFilters() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const calendarTableBody = document.getElementById('calendar-table-body');
+
+    const startDateValue = startDateInput.value;
+    const endDateValue = endDateInput.value;
+
+    // Filter Chart and Calendar Table Data (Client-Side)
+    const start = new Date(startDateValue + 'T00:00:00Z');
+    const end = new Date(endDateValue + 'T23:59:59Z');
+
+    const filteredCalendar = calendarData.filter(entry => {
+        const current = new Date(entry.date + 'T00:00:00Z');
+        return (!isNaN(start) ? current >= start : true) &&
+               (!isNaN(end) ? current <= end : true);
+    });
+
+    const newLabels = filteredCalendar.map(entry => entry.date);
+    const newRawData = filteredCalendar.map(entry => entry.count);
+
+    // Update Chart
+    if (chart) {
+        chart.data.labels = newLabels;
+        chart.data.datasets.forEach(dataset => {
+            if (dataset.label === '原始資料 (每日總處方數)' || dataset.label === '區域顏色依斜率變化') {
+                dataset.data = newRawData;
+            }
+            if (dataset.label === '7日移動平均') {
+                 dataset.data = movingAverage(newRawData);
+            }
+            if (dataset.label === '7日局部斜率') {
+                 dataset.data = rollingSlope(newRawData);
+            }
+        });
+        chart.update();
+    } else {
+         console.error("Chart object not available for update.");
+    }
+
+    // Update Calendar Table
+    calendarTableBody.innerHTML = '';
+    if (filteredCalendar.length > 0) {
+        filteredCalendar.forEach(entry => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${entry.date}</td><td>${entry.count}</td>`;
+            calendarTableBody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="2">篩選範圍內無資料。</td>`;
+        calendarTableBody.appendChild(row);
+    }
+}
+
+// --- Initial Setup ---
+window.addEventListener('DOMContentLoaded', () => {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    if (calendarData && calendarData.length > 0) {
+        const sortedCalendarData = [...calendarData].sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (sortedCalendarData.length > 0) {
+             startDateInput.value = sortedCalendarData[0].date;
+        }
+    } else {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 30); 
+        startDateInput.value = yesterday.toISOString().split('T')[0];
+    }
+    endDateInput.value = new Date().toISOString().split('T')[0];
+
+    applyFilters(); // Automatically filter on load
+});
+
+</script>
+</body>
+</html>

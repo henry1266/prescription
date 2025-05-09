@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>進階趨勢預測分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1, h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 30px; }
+        button { padding: 8px 15px; cursor: pointer; margin-left: 5px; }
+        .error-message { color: red; font-weight: bold; }
+        .forecast-controls { margin-top: 10px; margin-bottom: 20px; padding: 15px; border: 1px solid #e0e0e0; background-color: #f9f9f9;}
+        .forecast-controls label { margin-right: 5px; }
+        .forecast-controls input[type="number"] { width: 60px; margin-right: 15px; }
+        .date-filters { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>進階趨勢預測分析</h1>
+
+    <div class="date-filters">
+        <h2>📅 篩選日期範圍</h2>
+        <label for="startDate">起始日期：</label>
+        <input type="date" id="startDate">
+        <label for="endDate">結束日期：</label>
+        <input type="date" id="endDate">
+        <button onclick="applyFiltersAndForecasts()">套用篩選並更新圖表</button>
+    </div>
+
+    <div class="forecast-controls">
+        <h3><span style="font-size: 1.17em;">🔮 趨勢預測設定</span></h3>
+        <label for="forecastSteps">預測未來期數:</label>
+        <input type="number" id="forecastSteps" value="7" min="1">
+        <button onclick="generateArimaForecast()">ARIMA 預測</button>
+        <button onclick="generateHoltWintersForecast()">指數平滑法預測</button>
+        <button onclick="clearForecasts()">清除預測線</button>
+    </div>
+
+    <h2>📈 每日有效處方筆數與趨勢預測</h2>
+    <div style="position: relative; height:550px; width:100%">
+        <canvas id="forecastChart"></canvas>
+    </div>
+
+<script>
+const initialCalendarData = <%- typeof calendar !== "undefined" ? JSON.stringify(calendar) : "[]" %>;
+let chart;
+let currentRawData = [];
+let currentLabels = [];
+
+function initializeChart(labels, data) {
+    const ctx = document.getElementById("forecastChart")?.getContext("2d");
+    if (!ctx) {
+        console.error("Canvas context (forecastChart) not found.");
+        return;
+    }
+    if (chart) {
+        chart.destroy(); // Destroy existing chart instance before creating a new one
+    }
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "原始資料",
+                    data: data,
+                    borderColor: "blue",
+                    backgroundColor: "rgba(0, 0, 255, 0.1)",
+                    fill: false,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: "有效處方筆數" },
+                    position: "left",
+                },
+                x: {
+                    title: { display: true, text: "日期" },
+                    type: "time",
+                    time: {
+                        unit: "day",
+                        tooltipFormat: "yyyy-MM-dd",
+                        displayFormats: {
+                            day: "yyyy-MM-dd"
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: "index", intersect: false }
+            }
+        }
+    });
+}
+
+function applyFiltersAndForecasts() {
+    const startDateValue = document.getElementById("startDate").value;
+    const endDateValue = document.getElementById("endDate").value;
+
+    if (!startDateValue || !endDateValue) {
+        alert("請選擇起始和結束日期。");
+        return;
+    }
+
+    const start = new Date(startDateValue + "T00:00:00Z");
+    const end = new Date(endDateValue + "T23:59:59Z");
+
+    const filteredData = initialCalendarData.filter(entry => {
+        const current = new Date(entry.date + "T00:00:00Z");
+        return (!isNaN(start) ? current >= start : true) &&
+               (!isNaN(end) ? current <= end : true);
+    });
+
+    currentLabels = filteredData.map(entry => entry.date);
+    currentRawData = filteredData.map(entry => entry.count);
+    
+    initializeChart(currentLabels, currentRawData);
+}
+
+async function generateArimaForecast() {
+    if (!chart || currentRawData.length === 0) {
+        alert("請先套用篩選以載入數據。");
+        return;
+    }
+    const steps = parseInt(document.getElementById("forecastSteps").value) || 7;
+
+    if (currentRawData.length < 10) {
+        alert("ARIMA 預測需要至少10個數據點。");
+        return;
+    }
+
+    try {
+        const response = await fetch("/prescriptionChart/api/forecast/arima", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: currentRawData, steps: steps, s: 7, P:1, D:1, Q:1 }) 
+        });
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "ARIMA forecast failed");
+        }
+        const forecastResult = await response.json();
+        const predictions = forecastResult.predictions;
+
+        const lastDate = new Date(currentLabels[currentLabels.length - 1]);
+        const forecastLabels = [];
+        for (let i = 1; i <= steps; i++) {
+            const nextDate = new Date(lastDate);
+            nextDate.setDate(lastDate.getDate() + i);
+            forecastLabels.push(nextDate.toISOString().split("T")[0]);
+        }
+
+        const arimaDataset = {
+            label: "ARIMA 預測",
+            data: Array(currentRawData.length).fill(null).concat(predictions),
+            borderColor: "green",
+            borderDash: [5, 5],
+            fill: false,
+            order: 5
+        };
+        
+        const existingIndex = chart.data.datasets.findIndex(ds => ds.label === "ARIMA 預測");
+        if (existingIndex > -1) chart.data.datasets.splice(existingIndex, 1);
+        
+        const tempLabels = [...currentLabels];
+        forecastLabels.forEach(fl => {
+            if (!tempLabels.includes(fl)) tempLabels.push(fl);
+        });
+        chart.data.labels = tempLabels.sort((a,b) => new Date(a) - new Date(b));
+
+        chart.data.datasets.push(arimaDataset);
+        chart.update();
+
+    } catch (error) {
+        console.error("Error generating ARIMA forecast:", error);
+        alert(`ARIMA 預測失敗: ${error.message}`);
+    }
+}
+
+async function generateHoltWintersForecast() {
+    if (!chart || currentRawData.length === 0) {
+        alert("請先套用篩選以載入數據。");
+        return;
+    }
+    const steps = parseInt(document.getElementById("forecastSteps").value) || 7;
+    const period = 7; 
+
+    if (currentRawData.length < 2 * period) {
+        alert(`指數平滑法預測需要至少 ${2 * period} 個數據點。`);
+        return;
+    }
+
+    try {
+        const response = await fetch("/prescriptionChart/api/forecast/holtwinters", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: currentRawData, steps: steps, period: period, alpha: 0.2, beta: 0.1, gamma: 0.1 })
+        });
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Holt-Winters forecast failed");
+        }
+        const forecastResult = await response.json();
+        const predictions = forecastResult.predictions;
+
+        const lastDate = new Date(currentLabels[currentLabels.length - 1]);
+        const forecastLabels = [];
+        for (let i = 1; i <= steps; i++) {
+            const nextDate = new Date(lastDate);
+            nextDate.setDate(lastDate.getDate() + i);
+            forecastLabels.push(nextDate.toISOString().split("T")[0]);
+        }
+
+        const hwDataset = {
+            label: "指數平滑法預測",
+            data: Array(currentRawData.length).fill(null).concat(predictions),
+            borderColor: "purple",
+            borderDash: [3, 3],
+            fill: false,
+            order: 6
+        };
+
+        const existingIndex = chart.data.datasets.findIndex(ds => ds.label === "指數平滑法預測");
+        if (existingIndex > -1) chart.data.datasets.splice(existingIndex, 1);
+
+        const tempLabels = [...currentLabels];
+        forecastLabels.forEach(fl => {
+            if (!tempLabels.includes(fl)) tempLabels.push(fl);
+        });
+        chart.data.labels = tempLabels.sort((a,b) => new Date(a) - new Date(b));
+
+        chart.data.datasets.push(hwDataset);
+        chart.update();
+
+    } catch (error) {
+        console.error("Error generating Holt-Winters forecast:", error);
+        alert(`指數平滑法預測失敗: ${error.message}`);
+    }
+}
+
+function clearForecasts() {
+    if (!chart) return;
+    const forecastDatasetLabels = ["ARIMA 預測", "指數平滑法預測"];
+    let updated = false;
+
+    for (let i = chart.data.datasets.length - 1; i >= 0; i--) {
+        if (forecastDatasetLabels.includes(chart.data.datasets[i].label)) {
+            chart.data.datasets.splice(i, 1);
+            updated = true;
+        }
+    }
+    
+    // Reset labels to only the current filtered data labels
+    if (currentLabels.length > 0 && chart.data.labels.length > currentLabels.length) {
+        chart.data.labels = [...currentLabels].sort((a,b) => new Date(a) - new Date(b));
+        updated = true;
+    }
+
+    if (updated) {
+        chart.update();
+    }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+
+    if (initialCalendarData && initialCalendarData.length > 0) {
+        const sortedCalendarData = [...initialCalendarData].sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (sortedCalendarData.length > 0) {
+             startDateInput.value = sortedCalendarData[0].date;
+        }
+        // Set end date to the last date in the data or today, whichever is earlier
+        const lastDataDate = new Date(sortedCalendarData[sortedCalendarData.length -1].date);
+        const today = new Date();
+        endDateInput.value = (lastDataDate < today ? lastDataDate : today).toISOString().split("T")[0];
+
+    } else {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        startDateInput.value = thirtyDaysAgo.toISOString().split("T")[0];
+        endDateInput.value = new Date().toISOString().split("T")[0];
+    }
+    applyFiltersAndForecasts(); // Initial load
+});
+
+</script>
+</body>
+</html>
+

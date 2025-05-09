@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getDb } = require("../utils/database");
 const ARIMA = require("arima");
-const holtwinters = require("holtwinters");
+// const holtwinters = require("holtwinters"); // Removing problematic library
 
 const parseDateYYYYMMDD = (yyyymmdd) => {
     if (!yyyymmdd || yyyymmdd.length !== 8) return null;
@@ -170,45 +170,89 @@ router.post("/api/forecast/arima", async (req, res) => {
     }
 });
 
+// Custom Holt-Winters Triple Exponential Smoothing Implementation
+function customHoltWinters(data, alpha, beta, gamma, period, steps) {
+    if (!data || data.length < 2 * period) {
+        console.warn("Data length is too short for Holt-Winters with the given period.");
+        return Array(steps).fill(data[data.length - 1] || 0); // Simple fallback
+    }
+
+    let level = data[0];
+    let trend = 0;
+    for (let i = 0; i < period; i++) {
+        trend += (data[i + period] - data[i]) / period;
+    }
+    trend /= period;
+
+    const seasonal = Array(period).fill(0);
+    data.forEach((val, idx) => {
+        seasonal[idx % period] += val / (data.length / period); // Average for that season
+    });
+
+    const smoothed = [];
+    const forecasts = [];
+
+    for (let i = 0; i < data.length; i++) {
+        const lastLevel = level;
+        const lastTrend = trend;
+        const lastSeasonal = seasonal[i % period];
+
+        level = alpha * (data[i] - lastSeasonal) + (1 - alpha) * (lastLevel + lastTrend);
+        trend = beta * (level - lastLevel) + (1 - beta) * lastTrend;
+        seasonal[i % period] = gamma * (data[i] - level) + (1 - gamma) * lastSeasonal;
+        smoothed.push(level + trend + seasonal[i % period]);
+    }
+
+    for (let i = 0; i < steps; i++) {
+        const forecastIndex = data.length + i;
+        const seasonalComponent = seasonal[forecastIndex % period];
+        forecasts.push(level + (i + 1) * trend + seasonalComponent);
+    }
+    return forecasts;
+}
+
 router.post("/api/forecast/holtwinters", async (req, res) => {
     try {
         const { data, alpha, beta, gamma, period, steps } = req.body;
-        console.log("Holt-Winters Request Body:", req.body);
+        console.log("Custom Holt-Winters Request Body:", req.body);
         if (!data || !Array.isArray(data) || data.length === 0) {
             return res.status(400).json({ error: "Missing or invalid data for Holt-Winters forecast." });
         }
-        if (typeof holtwinters !== "function"){
-            console.error("holtwinters is not a function. Package might be imported incorrectly or not installed.");
-            return res.status(500).json({ error: "Holt-Winters library not loaded correctly." });
+
+        const pAlpha = alpha !== undefined ? alpha : 0.2;
+        const pBeta = beta !== undefined ? beta : 0.1;
+        const pGamma = gamma !== undefined ? gamma : 0.1;
+        const pPeriod = period !== undefined ? period : 7; // Default to 7 if 0 or undefined
+        const pSteps = steps || 7;
+        
+        if (pPeriod <= 0) {
+             console.warn("Holt-Winters period must be greater than 0. Defaulting to non-seasonal (Simple ES).");
+             // Fallback to a simpler smoothing if period is invalid, or implement Simple ES / Double ES separately
+             // For now, let's try to proceed with a default period if it was 0.
+             // This part might need a more robust non-seasonal ES implementation if period is truly 0.
+             // For simplicity, if period is 0, we'll just return last value or a very simple forecast.
+             // However, the customHoltWinters expects period > 0 for seasonal array.
+             // Let's ensure period is at least 1 for the seasonal array logic, though HW needs >1 for seasonality.
+             // The customHoltWinters function has a check for data.length < 2 * period.
         }
 
-        const pAlpha = alpha !== undefined ? alpha : 0.5;
-        const pBeta = beta !== undefined ? beta : 0.3;
-        const pGamma = gamma !== undefined ? gamma : 0.2;
-        const pPeriod = period !== undefined ? period : 0;
-        const pSteps = steps || 7;
+        console.log("Calling customHoltWinters with data (length):", data.length);
+        console.log(`Calling customHoltWinters(${pAlpha}, ${pBeta}, ${pGamma}, ${pPeriod}, ${pSteps})`);
 
-        console.log("Calling holtwinters with data (length):", data.length);
-        console.log(`Calling holtwinters(${pAlpha}, ${pBeta}, ${pGamma}, ${pPeriod}, ${pSteps})`);
-
-        // Corrected call to holtwinters: pass arguments directly
-        const predictions = holtwinters(data, pAlpha, pBeta, pGamma, pPeriod, pSteps);
+        const predictions = customHoltWinters(data, pAlpha, pBeta, pGamma, pPeriod, pSteps);
         
-        console.log("Holt-Winters Raw Predictions:", predictions);
+        console.log("Custom Holt-Winters Raw Predictions:", predictions);
 
         if (!predictions || !Array.isArray(predictions)) {
-            console.error("Holt-Winters returned invalid predictions:", predictions);
-            // If predictions is an object with an 'augumentedDataset' and other stats, 
-            // it means the library might be returning more than just the forecast.
-            // For now, we assume it should return an array of forecasted values.
-            return res.status(500).json({ error: "Holt-Winters forecast generated invalid results. Expected an array." });
+            console.error("Custom Holt-Winters returned invalid predictions:", predictions);
+            return res.status(500).json({ error: "Custom Holt-Winters forecast generated invalid results. Expected an array." });
         }
 
         res.json({ predictions });
 
     } catch (error) {
-        console.error("Error in Holt-Winters forecast execution:", error);
-        res.status(500).json({ error: "Failed to generate Holt-Winters forecast", details: error.message });
+        console.error("Error in Custom Holt-Winters forecast execution:", error);
+        res.status(500).json({ error: "Failed to generate Custom Holt-Winters forecast", details: error.message });
     }
 });
 

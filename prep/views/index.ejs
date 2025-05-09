@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>處方清單</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <h2>📅 篩選日期範圍</h2>
+    <label for="startDate">起始日期：</label>
+    <input type="date" id="startDate">
+    <label for="endDate">結束日期：</label>
+    <input type="date" id="endDate">
+    <button onclick="filterByDate()">篩選</button>
+	
+	<h2>📈 每日有效處方筆數（多線折線圖）</h2>
+    <canvas id="calendarChart" width="600" height="230"></canvas>
+
+
+
+<h1>處方清單</h1>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>PID</th>
+                <th>處方日期</th>
+                <th>天數</th>
+                <th>次數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% notes.forEach(note => { %>
+                <tr>
+                    <td><%= note.pid %></td>
+                    <td><%= note.predate %></td>
+                    <td><%= note.preday %></td>
+                    <td><%= note.precount %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <h2>📅 每日有效處方筆數</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>有效處方筆數</th>
+            </tr>
+        </thead>
+        <tbody id="calendar-table-body">
+            <% calendar.forEach(entry => { %>
+                <tr>
+                    <td><%= entry.date %></td>
+                    <td><%= entry.count %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+
+<script>
+const calendarData = <%- JSON.stringify(calendar) %>;
+
+// 原始資料
+const labels = calendarData.map(entry => entry.date);
+const rawData = calendarData.map(entry => entry.count);
+
+// 計算移動平均
+function movingAverage(data, windowSize = 7) {
+    const result = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < windowSize - 1) {
+            result.push(null); // 不足以產生移動平均
+        } else {
+            const subset = data.slice(i - windowSize + 1, i + 1);
+            const avg = subset.reduce((a, b) => a + b, 0) / windowSize;
+            result.push(avg);
+        }
+    }
+    return result;
+}
+
+
+
+// 局部斜率（每 7 天一段）
+function rollingSlope(data, windowSize = 7) {
+    const result = Array(data.length).fill(null);
+    for (let i = 0; i <= data.length - windowSize; i++) {
+        const x = Array.from({ length: windowSize }, (_, k) => k);
+        const y = data.slice(i, i + windowSize);
+        const meanX = x.reduce((a, b) => a + b) / windowSize;
+        const meanY = y.reduce((a, b) => a + b) / windowSize;
+        let num = 0, den = 0;
+        for (let k = 0; k < windowSize; k++) {
+            num += (x[k] - meanX) * (y[k] - meanY);
+            den += (x[k] - meanX) ** 2;
+        }
+        const slope = den === 0 ? 0 : num / den;
+        result[i + Math.floor(windowSize / 2)] = slope;
+    }
+    return result;
+}
+
+// 建立圖表
+const ctx = document.getElementById('calendarChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+    {
+        label: '區域顏色依斜率變化',
+        data: rawData,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        fill: true,
+        pointRadius: 0,
+        segment: {
+            backgroundColor: ctx => {
+                const index = ctx.p1DataIndex;
+                const slopeValue = rollingSlope(rawData)[index];
+                if (slopeValue > 0) return 'rgba(0, 128, 0, 0.2)';
+                if (slopeValue < 0) return 'rgba(255, 0, 0, 0.2)';
+                return 'rgba(128, 128, 128, 0.2)';
+            }
+        },
+        hidden: false
+    },
+    {
+        label: '原始資料',
+        data: rawData,
+        borderColor: 'blue',
+        backgroundColor: 'rgba(0, 0, 255, 0.1)',
+        fill: false,
+        hidden: false
+    },
+    {
+        label: '7日移動平均',
+        data: movingAverage(rawData),
+        borderColor: 'green',
+        backgroundColor: 'rgba(0, 128, 0, 0.1)',
+        fill: false,
+        hidden: false
+    },
+    {
+        label: '7日局部斜率',
+        data: rollingSlope(rawData),
+        fill: false,
+        hidden: false,
+        segment: {
+            borderColor: ctx => {
+                const value = ctx.p1.parsed.y;
+                if (value > 0) return 'green';
+                if (value < 0) return 'red';
+                return 'gray';
+            }
+        },
+        borderWidth: 2,
+        pointRadius: 3,
+    }
+]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: { display: true, text: '有效處方筆數' }
+            },
+            y2: {
+                beginAtZero: true,
+                title: { display: true, text: '成長率 (%)' },
+                position: 'right',
+                grid: { drawOnChartArea: false }
+            },
+            x: {
+                title: { display: true, text: '日期' }
+            }
+        },
+        plugins: {
+            legend: { display: true },
+            tooltip: { mode: 'index', intersect: false }
+        }
+    }
+});
+
+// 勾選控制
+function toggleDataset(index) {
+    chart.data.datasets[index].hidden = !chart.data.datasets[index].hidden;
+    chart.update();
+}
+
+function filterByDate() {
+            const start = new Date(document.getElementById('startDate').value);
+            const end = new Date(document.getElementById('endDate').value);
+
+            const filtered = calendarData.filter(entry => {
+                const current = new Date(entry.date);
+                return (!isNaN(start) ? current >= start : true) &&
+                       (!isNaN(end) ? current <= end : true);
+            });
+
+            const newLabels = filtered.map(entry => entry.date);
+            const newData = filtered.map(entry => entry.count);
+
+            chart.data.labels = newLabels;
+            chart.data.datasets[0].data = newData;
+            chart.update();
+
+            const slope = calculateSlope(newLabels, newData);
+            document.getElementById('slopeOutput').innerText = `斜率：${slope.toFixed(4)}`;
+
+            // 更新表格資料（可選）
+            const tableBody = document.getElementById('calendar-table-body');
+            tableBody.innerHTML = '';
+            filtered.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${entry.date}</td><td>${entry.count}</td>`;
+                tableBody.appendChild(row);
+            });
+        }
+// 預設自動篩選：從最早日期到今天
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('startDate').value = calendarData[0]?.date;
+    document.getElementById('endDate').value = new Date().toISOString().split("T")[0];
+    filterByDate(); // 預設範圍初始化
+});
+</script>
+</body>
+</html>

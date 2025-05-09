@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>處方清單與分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        h1, h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 30px; }
+        table { border-collapse: collapse; margin-top: 15px; width: auto; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { padding: 8px 15px; cursor: pointer; }
+        #completed-pids-container { margin-top: 20px; padding: 15px; border: 1px solid #e0e0e0; background-color: #f9f9f9; }
+        #completed-pids-list { margin-top: 10px; }
+        #completed-pids-list table { width: 100%; } /* Make table full width of container */
+        .error-message { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>處方分析儀表板</h1>
+
+    <h2>📅 篩選日期範圍</h2>
+    <label for="startDate">起始日期：</label>
+    <input type="date" id="startDate">
+    <label for="endDate">結束日期：</label>
+    <input type="date" id="endDate">
+    <button onclick="applyFilters()">篩選</button>
+
+    <!-- Container for Completed PIDs Table -->
+    <div id="completed-pids-container">
+        <h2>📌 篩選期間內到期且為最後處方的記錄</h2>
+        <div id="completed-pids-list">請點擊「篩選」按鈕以查詢。</div>
+        <div id="completed-pids-error" class="error-message" style="display: none;"></div>
+    </div>
+
+    <h2>📈 每日有效處方筆數（多線折線圖）</h2>
+    <canvas id="calendarChart" width="600" height="230"></canvas>
+
+    <h2>📋 原始處方清單 (Pretype 04)</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>PID</th>
+                <th>處方日期 (YYYYMMDD)</th>
+                <th>天數</th>
+                <th>次數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (typeof notes !== 'undefined' && notes.length > 0) { %>
+                <% notes.forEach(note => { %>
+                    <tr>
+                        <td><%= note.pid %></td>
+                        <td><%= note.predate %></td>
+                        <td><%= note.preday %></td>
+                        <td><%= note.precount %></td>
+                    </tr>
+                <% }); %>
+            <% } else { %>
+                <tr><td colspan="4">無處方資料。</td></tr>
+            <% } %>
+        </tbody>
+    </table>
+
+    <h2>📅 每日有效處方筆數統計</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>日期 (YYYY-MM-DD)</th>
+                <th>有效處方筆數</th>
+            </tr>
+        </thead>
+        <tbody id="calendar-table-body">
+            <% if (typeof calendar !== 'undefined' && calendar.length > 0) { %>
+                <% calendar.forEach(entry => { %>
+                    <tr>
+                        <td><%= entry.date %></td>
+                        <td><%= entry.count %></td>
+                    </tr>
+                <% }); %>
+            <% } else { %>
+                <tr><td colspan="2">無日曆資料。</td></tr>
+            <% } %>
+        </tbody>
+    </table>
+
+
+<script>
+const calendarData = <%- typeof calendar !== 'undefined' ? JSON.stringify(calendar) : '[]' %>;
+const initialNotes = <%- typeof notes !== 'undefined' ? JSON.stringify(notes) : '[]' %>;
+
+// --- Chart Data Preparation ---
+const labels = calendarData.map(entry => entry.date);
+const rawData = calendarData.map(entry => entry.count);
+
+// --- Chart Helper Functions (Moving Average, Rolling Slope) ---
+function movingAverage(data, windowSize = 7) {
+    const result = [];
+    if (!data || data.length === 0) return result;
+    for (let i = 0; i < data.length; i++) {
+        if (i < windowSize - 1) {
+            result.push(null);
+        } else {
+            const subset = data.slice(i - windowSize + 1, i + 1);
+            const sum = subset.reduce((a, b) => (a || 0) + (b || 0), 0);
+            result.push(sum / windowSize);
+        }
+    }
+    return result;
+}
+
+function rollingSlope(data, windowSize = 7) {
+    const result = Array(data?.length || 0).fill(null);
+     if (!data || data.length < windowSize) return result;
+    for (let i = 0; i <= data.length - windowSize; i++) {
+        const x = Array.from({ length: windowSize }, (_, k) => k);
+        const y = data.slice(i, i + windowSize);
+        if (y.some(val => typeof val !== 'number' || isNaN(val))) continue;
+
+        const meanX = (windowSize - 1) / 2;
+        const meanY = y.reduce((a, b) => a + b, 0) / windowSize;
+        let num = 0, den = 0;
+        for (let k = 0; k < windowSize; k++) {
+            num += (x[k] - meanX) * (y[k] - meanY);
+            den += (x[k] - meanX) ** 2;
+        }
+        const slope = den === 0 ? 0 : num / den;
+        result[i + Math.floor(windowSize / 2)] = slope;
+    }
+    return result;
+}
+
+// --- Chart Initialization ---
+let chart;
+const ctx = document.getElementById('calendarChart')?.getContext('2d');
+if (ctx) {
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '區域顏色依斜率變化',
+                    data: rawData,
+                    borderColor: 'transparent',
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    fill: true,
+                    pointRadius: 0,
+                    segment: {
+                        backgroundColor: ctx => {
+                            const index = ctx.p1DataIndex;
+                            const slopeValues = rollingSlope(rawData);
+                            const slopeValue = slopeValues[index];
+                            if (slopeValue === null || typeof slopeValue === 'undefined') return 'rgba(128, 128, 128, 0.1)';
+                            if (slopeValue > 0) return 'rgba(0, 128, 0, 0.2)';
+                            if (slopeValue < 0) return 'rgba(255, 0, 0, 0.2)';
+                            return 'rgba(128, 128, 128, 0.2)';
+                        }
+                    },
+                    hidden: false,
+                    order: 4
+                },
+                {
+                    label: '原始資料',
+                    data: rawData,
+                    borderColor: 'blue',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    fill: false,
+                    hidden: false,
+                    order: 1
+                },
+                {
+                    label: '7日移動平均',
+                    data: movingAverage(rawData),
+                    borderColor: 'orange',
+                    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                    fill: false,
+                    hidden: false,
+                    order: 2
+                },
+                {
+                    label: '7日局部斜率',
+                    data: rollingSlope(rawData),
+                    borderColor: 'gray',
+                    fill: false,
+                    hidden: false,
+                    segment: {
+                        borderColor: ctx => {
+                            const value = ctx.p1.parsed.y;
+                            if (value === null || typeof value === 'undefined') return 'rgba(128, 128, 128, 0.5)';
+                            if (value > 0) return 'green';
+                            if (value < 0) return 'red';
+                            return 'gray';
+                        }
+                    },
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    order: 3,
+                    yAxisID: 'ySlope'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '有效處方筆數' },
+                    position: 'left',
+                },
+                ySlope: {
+                    title: { display: true, text: '7日局部斜率值' },
+                    position: 'right',
+                    grid: { drawOnChartArea: false }
+                },
+                x: {
+                    title: { display: true, text: '日期' }
+                }
+            },
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: 'index', intersect: false }
+            }
+        }
+    });
+} else {
+    console.error('Canvas context not found');
+}
+
+// --- Filtering Logic ---
+async function applyFilters() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const completedPidsListDiv = document.getElementById('completed-pids-list');
+    const completedPidsErrorDiv = document.getElementById('completed-pids-error');
+    const calendarTableBody = document.getElementById('calendar-table-body');
+
+    const startDateValue = startDateInput.value;
+    const endDateValue = endDateInput.value;
+
+    // --- 1. Fetch Completed Prescriptions --- 
+    completedPidsListDiv.innerHTML = '查詢中...'; // Use innerHTML for table later
+    completedPidsErrorDiv.style.display = 'none';
+    completedPidsErrorDiv.textContent = '';
+
+    if (!startDateValue || !endDateValue) {
+        completedPidsListDiv.textContent = '請選擇起始和結束日期。';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/completed-prescriptions?startDate=${startDateValue}&endDate=${endDateValue}`);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const results = data.completedPrescriptions; // Array of {pid, endDate}
+
+        if (results && results.length > 0) {
+            // Build HTML Table
+            let tableHTML = '<table border="1"><thead><tr><th>PID</th><th>結束日期</th></tr></thead><tbody>';
+            results.forEach(item => {
+                tableHTML += `<tr><td>${item.pid}</td><td>${item.endDate}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            completedPidsListDiv.innerHTML = tableHTML;
+        } else {
+            completedPidsListDiv.textContent = '在此期間內無符合條件的處方到期。';
+        }
+    } catch (error) {
+        console.error('Error fetching completed PIDs:', error);
+        completedPidsListDiv.textContent = '查詢失敗。';
+        completedPidsErrorDiv.textContent = `錯誤: ${error.message}`; 
+        completedPidsErrorDiv.style.display = 'block';
+    }
+
+    // --- 2. Filter Chart and Calendar Table Data (Client-Side) ---
+    const start = new Date(startDateValue + 'T00:00:00Z');
+    const end = new Date(endDateValue + 'T23:59:59Z');
+
+    const filteredCalendar = calendarData.filter(entry => {
+        const current = new Date(entry.date + 'T00:00:00Z');
+        return (!isNaN(start) ? current >= start : true) &&
+               (!isNaN(end) ? current <= end : true);
+    });
+
+    const newLabels = filteredCalendar.map(entry => entry.date);
+    const newRawData = filteredCalendar.map(entry => entry.count);
+
+    // Update Chart
+    if (chart) {
+        chart.data.labels = newLabels;
+        chart.data.datasets.forEach(dataset => {
+            if (dataset.label === '原始資料' || dataset.label === '區域顏色依斜率變化') {
+                dataset.data = newRawData;
+            }
+            if (dataset.label === '7日移動平均') {
+                 dataset.data = movingAverage(newRawData);
+            }
+            if (dataset.label === '7日局部斜率') {
+                 dataset.data = rollingSlope(newRawData);
+            }
+        });
+        chart.update();
+    } else {
+         console.error("Chart object not available for update.");
+    }
+
+    // Update Calendar Table
+    calendarTableBody.innerHTML = '';
+    if (filteredCalendar.length > 0) {
+        filteredCalendar.forEach(entry => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${entry.date}</td><td>${entry.count}</td>`;
+            calendarTableBody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="2">篩選範圍內無資料。</td>`;
+        calendarTableBody.appendChild(row);
+    }
+}
+
+// --- Initial Setup ---
+window.addEventListener('DOMContentLoaded', () => {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+
+    if (calendarData && calendarData.length > 0) {
+        startDateInput.value = calendarData[0].date;
+    } else {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        startDateInput.value = yesterday.toISOString().split('T')[0];
+    }
+    endDateInput.value = new Date().toISOString().split('T')[0];
+
+    // applyFilters(); // Optional: Uncomment to automatically filter on load
+});
+
+</script>
+</body>
+</html>
+

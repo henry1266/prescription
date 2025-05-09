@@ -1,9 +1,9 @@
 // routes/searchPrescriptions.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const client = require('../utils/db'); // 引入 MongoDB 客戶端
+const client = require("../utils/db"); // 引入 MongoDB 客戶端
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   const pid = req.query.pid;
   let prescriptions = [];
   let prescriptionsByDate = {};
@@ -44,29 +44,29 @@ router.get('/', async (req, res) => {
     }
 
     // 渲染結果頁面，傳遞查詢結果
-    res.render('result1', {
+    res.render("result1", {
       prescriptions,
       prescriptionsByDate,
       patient: patient || {},
-      pid: patient ? patient.pid : '未知',
-      pname: patient ? patient.pname : '未知',
-      pdate: patient ? patient.pdate : '',
-      pvip: patient ? patient.pvip : '',
-      pphone: patient ? patient.pphone : '',
-      pline: patient ? patient.pline : '',
-      pdetail: patient ? patient.pdetail : '',
-      errorMessage: prescriptions.length > 0 ? null : '沒有找到相關處方信息',
+      pid: patient ? patient.pid : "未知",
+      pname: patient ? patient.pname : "未知",
+      pdate: patient ? patient.pdate : "",
+      pvip: patient ? patient.pvip : "",
+      pphone: patient ? patient.pphone : "",
+      pline: patient ? patient.pline : "",
+      pdetail: patient ? patient.pdetail : "",
+      errorMessage: prescriptions.length > 0 ? null : "沒有找到相關處方信息",
     });
   } catch (error) {
     console.error(error);
-    res.render('result1', { errorMessage: '查詢時出錯' });
+    res.render("result1", { errorMessage: "查詢時出錯" });
   } finally {
     await client.close();
   }
 });
 
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   const { pid, pdate, pname } = req.query;
   let prescriptions = [];
   let prescriptionsByDate = {};
@@ -117,25 +117,26 @@ router.get('/', async (req, res) => {
     }
 
     // 渲染结果页面，传递查询结果
-    res.render('result1', {
+    res.render("result1", {
       prescriptions,
       prescriptionsByDate,
       patient: patient || {},
-      pid: patient ? patient.pid : '未知',
-      pname: patient ? patient.pname : '未知',
-      pdate: patient ? patient.pdate : '',
-      pvip: patient ? patient.pvip : '',
-      pphone: patient ? patient.pphone : '',
-      pline: patient ? patient.pline : '',
-      pdetail: patient ? patient.pdetail : '',
-      errorMessage: prescriptions.length > 0 ? null : '没有找到相关处方信息',
+      pid: patient ? patient.pid : "未知",
+      pname: patient ? patient.pname : "未知",
+      pdate: patient ? patient.pdate : "",
+      pvip: patient ? patient.pvip : "",
+      pphone: patient ? patient.pphone : "",
+      pline: patient ? patient.pline : "",
+      pdetail: patient ? patient.pdetail : "",
+      errorMessage: prescriptions.length > 0 ? null : "沒有找到相關處方信息",
     });
   } catch (error) {
     console.error(error);
-    res.render('result1', { errorMessage: '查询时出错' });
+    res.render("result1", { errorMessage: "查詢時出錯" });
   } finally {
     await client.close();
   }
 });
 
 module.exports = router;
+

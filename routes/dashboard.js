@@ -1,17 +1,17 @@
-const express = require(\'express');
+const express = require("express");
 const router = express.Router();
-const moment = require(\'moment');
-const dbManager = require(\'../utils/database'); // Use the new database manager
+const moment = require("moment");
+const dbManager = require("../utils/database"); // Use the new database manager
 
-router.get(\'/:year/:month', async (req, res) => {
+router.get("/:year/:month", async (req, res) => {
     try {
         const db = dbManager.getDb(); // Get DB instance from manager
-        const prescriptions = db.collection(\"prescriptions\");
+        const prescriptions = db.collection("prescriptions");
 
         const endDate = moment();
-        const startDate = moment().subtract(8 * 7 - 1, \'days\');
-        const endDateFormatted = endDate.format(\'YYYYMMDD');
-        const startDateFormatted = startDate.format(\'YYYYMMDD');
+        const startDate = moment().subtract(8 * 7 - 1, "days");
+        const endDateFormatted = endDate.format("YYYYMMDD");
+        const startDateFormatted = startDate.format("YYYYMMDD");
 
         const data = await prescriptions.aggregate([
             {
@@ -21,12 +21,12 @@ router.get(\'/:year/:month', async (req, res) => {
             },
             {
                 $group: {
-                    _id: { date: \"$predate\" },
+                    _id: { date: "$predate" },
                     prescriptionCount: { $sum: 1 }
                 }
             },
             {
-                $sort: { \"_id.date\": 1 }
+                $sort: { "_id.date": 1 }
             }
         ]).toArray();
 
@@ -36,11 +36,11 @@ router.get(\'/:year/:month', async (req, res) => {
             const weekData = [];
             let weekSum = 0;
             for (let day = 0; day < 7; day++) {
-                const currentDate = moment(startDate).add(week * 7 + day, \'days\').format(\'YYYYMMDD');
+                const currentDate = moment(startDate).add(week * 7 + day, "days").format("YYYYMMDD");
                 const dayData = data.find(d => d._id.date === currentDate);
                 const prescriptionCount = dayData ? dayData.prescriptionCount : 0;
                 weekData.push({
-                    date: moment(currentDate, \'YYYYMMDD').format(\'YYYY-MM-DD'),
+                    date: moment(currentDate, "YYYYMMDD").format("YYYY-MM-DD"),
                     value: prescriptionCount
                 });
                 weekSum += prescriptionCount;
@@ -51,8 +51,8 @@ router.get(\'/:year/:month', async (req, res) => {
 
         const year = parseInt(req.params.year);
         const month = parseInt(req.params.month) - 1;
-        const firstDate = moment([year, month]).startOf(\'month').format(\'YYYYMMDD');
-        const lastDate = moment([year, month]).endOf(\'month').format(\'YYYYMMDD');
+        const firstDate = moment([year, month]).startOf("month").format("YYYYMMDD");
+        const lastDate = moment([year, month]).endOf("month").format("YYYYMMDD");
 
         const data1 = await prescriptions.aggregate([
             {
@@ -62,12 +62,12 @@ router.get(\'/:year/:month', async (req, res) => {
             },
             {
                 $group: {
-                    _id: { date: \"$predate\" },
+                    _id: { date: "$predate" },
                     prescriptionCount: { $sum: 1 }
                 }
             },
             {
-                $sort: { \"_id.date\": 1 }
+                $sort: { "_id.date": 1 }
             }
         ]).toArray();
 
@@ -79,8 +79,8 @@ router.get(\'/:year/:month', async (req, res) => {
             dataMap.set(d._id.date, d.prescriptionCount || 0);
         });
 
-        for (let day = 1; day <= moment(firstDate, \'YYYYMMDD').daysInMonth(); day++) {
-            const date = moment([year, month]).date(day).format(\'YYYYMMDD');
+        for (let day = 1; day <= moment(firstDate, "YYYYMMDD").daysInMonth(); day++) {
+            const date = moment([year, month]).date(day).format("YYYYMMDD");
             const prescriptionCount = dataMap.get(date) || 0;
             datesInMonth.push({ date, value: prescriptionCount });
             if (prescriptionCount > 0) {
@@ -96,12 +96,13 @@ router.get(\'/:year/:month', async (req, res) => {
             .toArray();
         const times = prescriptionc.map(prescription => prescription.presec);
 
-        res.render(\'dashboard', { datesInMonth, moment, datesInWeeks, weeklySums, times });
+        res.render("dashboard", { datesInMonth, moment, datesInWeeks, weeklySums, times });
     } catch (error) {
-        console.error(\"Error fetching data:\", error);
-        res.status(500).send(\"Error fetching data\");
+        console.error("Error fetching data:", error);
+        res.status(500).send("Error fetching data");
     }
     // No client.close() here, connection is managed centrally
 });
 
 module.exports = router;
+

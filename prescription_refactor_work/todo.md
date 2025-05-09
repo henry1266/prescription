@@ -1,0 +1,65 @@
+# 專案重構實施待辦事項
+
+本清單追蹤「專案重構與解耦詳細待辦事項清單」的實施進度。
+
+- [x] **準備階段**
+    - [x] 001. 理解專案需求與重構目標 (參考 `/home/ubuntu/todolist_task/project_refactor_todolist_detailed.md`)
+    - [x] 002. 設定專案開發環境 (檢查依賴等)
+- [ ] **階段一：基礎重構與配置管理**
+    - [x] 003. 實施統一的數據庫連接模塊
+        - [x] 任務 1.1：徹底評估現有數據庫連接方式 (db.js, db2.js, app.js reviewed, route files to be checked during migration)
+        - [x] 任務 1.2：設計並實施一個健壯的、統一的數據庫連接管理模塊 (utils/database.js created)
+        - [x] 任務 1.3：系統性遷移所有現有代碼以使用新的 utils/database.js 模塊
+            - [x] 遷移 app.js 以使用新數據庫模塊
+            - [x] 遷移路由文件 (routes/managePrescriptions.js, routes/managePrescriptions2.js) 以使用新數據庫模塊
+            - [x] 刪除舊的數據庫連接文件 (utils/db.js, utils/db2.js)
+        - [ ] 任務 1.4：全面測試數據庫連接的穩定性、功能正確性及資源管理 (待執行或作為下一步驟前置)
+    - [x] 004. 外部化並集中管理硬編碼的配置信息
+        - [x] 任務 2.1：徹底清查專案中所有硬編碼的配置項 (已識別DB URI, DB Name, Port, LINE Token)
+        - [x] 任務 2.2：選擇並實施配置管理方案 (已安裝 dotenv 並創建 .env 文件)
+        - [x] 任務 2.3：全面更新代碼以從環境變量中讀取配置 (app.js, utils/database.js, routes/managePrescriptions.js, routes/managePrescriptions2.js 已更新)
+        - [ ] 任務 2.4：嚴格測試不同環境下的配置加載和應用行為 (待執行)
+- [x] **進度報告與確認點 (階段一完成後)**
+    - [x] 005. 報告階段一完成情況，提交代碼變更，並與用戶確認後續步驟 (階段一確認完成，用戶回報之模塊未找到錯誤已修復)
+- [x] **錯誤修復階段 (用戶回報)**
+    - [x] 006. (Planner Step) 修復因數據庫模塊重構導致的模塊未找到錯誤
+        - [x] 更新 calculate.js 以使用新的 database.js 模塊
+        - [x] 更新 calendar.js 以使用新的 database.js 模塊
+        - [x] 更新 customerTimeChart.js 以使用新的 database.js 模塊
+        - [x] 更新 dashboard.js 以使用新的 database.js 模塊
+        - [x] 更新 filter.js 以使用新的 database.js 模塊
+        - [x] 更新 gantt.js 以使用新的 database.js 模塊並從環境變量讀取 LINE token
+        - [x] 更新 getReports.js 以使用新的 database.js 模塊
+        - [x] 更新 getReportsAge.js 以使用新的 database.js 模塊
+        - [x] 更新 orders.js 以使用新的 database.js 模塊 (指定 'inventory' 資料庫)
+        - [x] 更新 orderskeyin.js 移除未使用的舊 database.js 模塊引用
+        - [x] 更新 ordersresult.js 以使用新的 database.js 模塊 (指定 'inventory' 資料庫)
+        - [x] 更新 result.js 以使用新的 database.js 模塊
+        - [x] 更新 searchByDate.js 以使用新的 database.js 模塊
+        - [x] 更新 searchByInsuranceCode.js 以使用新的 database.js 模塊
+        - [x] 更新 searchPrescription.js 以使用新的 database.js 模塊
+        - [x] 增強 utils/database.js 以支持傳遞特定資料庫名稱，並應用於相關路由
+- [x] **階段二：代碼重用與職責分離**
+    - [x] 006. 消除路由邏輯中的代碼重複
+        - [x] 識別 managePrescriptions.js 和 managePrescriptions2.js 中的重複邏輯 (處方獲取、狀態更新、LINE 通知)
+        - [x] 創建 utils/prescriptionHelper.js 模塊，包含共享函數 getProcessedPrescriptions, updatePreiStatus, sendLineNotification
+        - [x] 重構 managePrescriptions.js 以使用 prescriptionHelper.js
+        - [x] 重構 managePrescriptions2.js 以使用 prescriptionHelper.js (並傳遞不同排序參數)
+    - [x] 007. 分離 `app.js` 中直接的數據庫操作邏輯
+        - [x] 識別 app.js 中的 /delete/:id 路由直接進行數據庫操作
+        - [x] 創建 utils/appHelper.js 模塊，包含共享函數 deletePrescriptionById
+        - [x] 重構 app.js 中的 /delete/:id 路由以使用 appHelper.js
+- [x] **階段三：架構演進與進階優化**
+    - [x] 008. 引入服務層 (Service Layer) 和數據訪問層 (DAL/Repository Pattern)
+        - [x] 創建 repositories 目錄 (e.g., prescriptionRepository.js, patientRepository.js)
+        - [x] 創建 services 目錄 (e.g., prescriptionService.js, lineService.js)
+        - [x] 實現 prescriptionRepository.js 封裝處方數據庫操作
+        - [x] 實現 patientRepository.js 封裝患者數據庫操作 (findByPid)
+        - [x] 實現 lineService.js 封裝 LINE 通知邏輯
+        - [x] 實現 prescriptionService.js 協調業務邏輯，調用 repositories 和其他 services
+        - [x] 更新路由 (managePrescriptions.js, managePrescriptions2.js) 以使用 prescriptionService
+        - [x] 更新 app.js (e.g., /delete/:id 路由) 以使用 prescriptionService
+        - [x] 移除不再需要的 utils/prescriptionHelper.js 和 utils/appHelper.js (或標記為待移除，確認所有功能已遷移)
+- [x] **收尾階段**
+    - [x] 009. 最終化並記錄所有變更，準備最終報告 (已生成 final_refactoring_report.md)
+

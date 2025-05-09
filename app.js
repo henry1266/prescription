@@ -16,13 +16,13 @@ const server = http.createServer(app);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-
 const formatDate = require('./utils/formatDate');
 
 const calculateRouter = require('./routes/calculate'); // 引入 calculate 路由
 const searchByDateRouter = require('./routes/searchByDate'); // 引入 searchByDate 路由
 const customerTimeChartRouter = require('./routes/customerTimeChart'); // 引入 customerTimeChart 路由
 const searchPrescriptionsRouter = require('./routes/searchPrescriptions'); // 引入 searchPrescriptions 路由
+const searchPrescriptionRouter = require('./routes/searchPrescription'); // 引入 searchPrescriptions 路由
 const searchByInsuranceCodeRouter = require('./routes/searchByInsuranceCode'); // 引入 searchByInsuranceCode 路由
 const updatePrescriptionRouter = require('./routes/updatePrescription'); // 引入 updatePrescription 路由
 const updatePatientRouter = require('./routes/updatePatient'); // 引入 updatePatient 路由
@@ -32,12 +32,14 @@ const calendarRoute = require('./routes/calendar'); // 引入 calendar 路由檔
 const weeksRoute = require('./routes/weeks'); // 引入 weeks 路由檔案
 const dashboardRoute = require('./routes/dashboard'); // 引入 dashboard 路由檔案
 const managePrescriptionsRoute = require('./routes/managePrescriptions'); // 引入 managePrescriptions 路由檔案
+const managePrescriptions2Route = require('./routes/managePrescriptions2'); // 引入 managePrescriptions 路由檔案
 const ordersRouter = require('./routes/orders');
 const ordersresultRouter = require('./routes/ordersresult');
 const orderskeyinRouter = require('./routes/orderskeyin');
 const stockRouter = require('./routes/stock'); // 引入 stock 路由檔案
 const ganttRouter = require('./routes/gantt'); // 引入 gantt 路由檔案
 const filterRouter = require('./routes/filter'); // 引入 filter 路由檔案
+const resultRouter = require('./routes/result');
 
 
 // 渲染主页，显示日期选择框
@@ -63,6 +65,7 @@ app.use('/calculate', calculateRouter);
 app.use('/searchByDate', searchByDateRouter);
 app.use('/customer-time-chart', customerTimeChartRouter);
 app.use('/searchPrescriptions', searchPrescriptionsRouter);
+app.use('/searchPrescription', searchPrescriptionRouter);
 app.use('/searchByInsuranceCode', searchByInsuranceCodeRouter);
 app.use('/updatePrescription', updatePrescriptionRouter);
 app.use('/updatePatient', updatePatientRouter);
@@ -72,12 +75,14 @@ app.use('/calendar', calendarRoute);
 app.use('/weeks', weeksRoute);
 app.use('/dashboard', dashboardRoute);
 app.use('/manageprescription', managePrescriptionsRoute);
+app.use('/manageprescription2', managePrescriptions2Route);
 app.use('/orders', ordersRouter);
 app.use('/ordersresult', ordersresultRouter);
 app.use('/orderskeyin', orderskeyinRouter);
 app.use('/stock', stockRouter);
 app.use('/gantt', ganttRouter);
 app.use('/filter', filterRouter);
+app.use('/result', resultRouter);
 
 app.post('/delete/:id', async (req, res) => {
   const prescriptionId = req.params.id;

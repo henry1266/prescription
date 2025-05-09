@@ -1,10 +1,7 @@
 const express = require('express');
-const moment = require('moment');
-const { MongoClient } = require('mongodb'); // 使用 MongoDB 原生驅動
 const router = express.Router();
-
-const uri = "mongodb://localhost:27017"; // MongoDB 連接 URI
-const client = new MongoClient(uri);
+const moment = require('moment');
+const client = require('../utils/db'); // 引入 MongoDB 客戶端
 
 router.get('/:year/:month', async (req, res) => {
     const year = parseInt(req.params.year);

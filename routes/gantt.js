@@ -1,14 +1,10 @@
 const express = require('express');
 const router = express.Router();
-//const { MongoClient } = require('mongodb');
-//const client = new MongoClient('mongodb://localhost:27017');
 const { ObjectId } = require('mongodb');
 const client = require('../utils/db'); // 引入 MongoDB 客戶端
-
 const axios = require('axios');
 // 配置 LINE Bot 的存取權杖
 const accessToken = 'exoanGGQhg1U2w5LDl4RJwHYAKezrU1MY9BUTTFuVVyu9srVXbJoV6HiF3t3Nm9q72myd6cHjsoSMqx3vf8D/M/J5PopwJFsgMJy3qYvoyG/icHwWVIUsZkbyWhUUyW0/CK4hVnqXR/Vjsa3IP8COAdB04t89/1O/w1cDnyilFU=';
-
 
 router.get('/', async (req, res) => {
   try {
@@ -150,7 +146,7 @@ router.post('/update_prei/:id', async (req, res) => {
 router.get('/getPatientPline', async (req, res) => {
   const pid = req.query.pid;
   
-  console.log(req.body);
+  //console.log(req.body);
 
   try {
       await client.connect();
@@ -175,7 +171,7 @@ router.get('/getPatientPline', async (req, res) => {
 router.post('/send_endmessage', async (req, res) => {
   const { plineField1, panme1, enddate1, prescriptionId } = req.body;
 
-  console.log('Received request:', { plineField1, panme1, enddate1, prescriptionId }); // 調試用
+  //console.log('Received request:', { plineField1, panme1, enddate1, prescriptionId }); // 調試用
 
   if (!plineField1 || !panme1) {
       console.error('聊天室ID或訊息內容為空');
@@ -207,31 +203,47 @@ router.post('/send_endmessage', async (req, res) => {
   }
 
   const bubbleMessage = {
-      type: 'flex',
-      altText: '竹文回診通知',
-      contents: {
-          type: 'bubble',
-          body: {
-              type: 'box',
-              layout: 'vertical',
-              contents: [
-                  { type: 'text', text: '慢箋結束通知', weight: 'bold', size: 'xl', align: 'center' },
-                  { type: 'text', text: `通知${panme1}先生/女士，您的慢性處方箋即將結束。`, wrap: true },
-                  { type: 'text', text: '建議可在回診前一個禮拜抽血追蹤健康狀況，感謝您。', wrap: true },
-                  {
-                      type: 'box',
-                      layout: 'baseline',
-                      contents: [
-                          { type: 'icon', url: 'https://scdn.line-apps.com/n/channel_devcenter/img/fx/review_gold_star_28.png', offsetStart: '33%' },
-                          { type: 'text', text: '處方結束日', align: 'center', margin: 'md', size: 'md' }
-                      ],
-                      margin: 'lg'
-                  },
-                  { type: 'text', text: enddate1, wrap: true, color: '#666666', size: 'md', flex: 5, align: 'center', margin: 'md' }
-              ]
-          }
-      }
-  };
+    type: 'flex',
+    altText: '竹文回診通知',
+    contents: {
+        type: 'bubble',
+        body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+                { type: 'text', text: '慢箋結束通知', weight: 'bold', size: 'xl', align: 'center' },
+                { type: 'text', text: `通知${panme1}先生/女士，您的慢性處方箋即將結束。`, wrap: true },
+                { type: 'text', text: '建議可在回診前一個禮拜抽血追蹤健康狀況，感謝您。', wrap: true },
+                {
+                    type: 'box',
+                    layout: 'baseline',
+                    contents: [
+                        { type: 'icon', url: 'https://img.lovepik.com/png/20231010/White-exclamation-mark-sign-above-red-triangle-traffic-warning_156615_wh860.png', offsetStart: '31%' },
+                        { type: 'text', text: '處方結束日', align: 'center', margin: 'md', size: 'md' }
+                    ],
+                    margin: 'lg'
+                },
+                { type: 'text', text: enddate1, wrap: true, color: '#666666', size: 'md', flex: 5, align: 'center', margin: 'md' }
+            ]
+        },
+        footer: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+                {
+                    type: 'button',
+                    color: '#857465',
+                    style: 'primary',
+                    action: {
+                        type: 'postback',
+                        label: '回診預約',
+                        data: '回診預約'
+                    }
+                }
+            ]
+        }
+    }
+};
 
   const data = { to: actualLineId, messages: [bubbleMessage] };
 
@@ -242,7 +254,7 @@ router.post('/send_endmessage', async (req, res) => {
               Authorization: `Bearer ${accessToken}`
           }
       });
-      console.log('LINE API成功推送:', response.data);
+      //console.log('LINE API成功推送:', response.data);
       res.send('推送訊息成功');
 
       // **通知成功後更新 prei = 0**

@@ -1,20 +1,22 @@
 // routes/calculate.js
 const express = require('express');
 const router = express.Router();
-const formatDate = require('../utils/formatDate'); // 假設 formatDate 在上層目錄
+const moment = require('moment');
 const client = require('../utils/db'); // 引入 MongoDB 客戶端
 
 
-router.post('/', async (req, res) => {
-  const startDate = formatDate(req.body.startdate);
-  const endDate = formatDate(req.body.enddate);
+router.get('/', async (req, res) => {
+  //const startDate = formatDate(req.query.startdate);
+  //const endDate = formatDate(req.query.enddate);
+  const startDate = moment(req.query.startdate, 'YYYY-MM-DD').format('YYYYMMDD');
+  const endDate = moment(req.query.enddate, 'YYYY-MM-DD').format('YYYYMMDD');
+
   let totalDayCost = 0;
   let prescriptions = [];
 
   try {
     await client.connect();
     const db = client.db("pharmacy");
-
 
     // 查詢符合日期範圍的處方
     prescriptions = await db.collection("prescriptions").find({

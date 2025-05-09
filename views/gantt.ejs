@@ -155,7 +155,7 @@ function sendNotification(pid, panme, enddate, prescriptionId) {
     .then(data => {
         console.log('Response from server:', data); // 調試用
         if (data.includes("推送訊息成功")) {
-            alert(`已已已成功通知 ${panme} 回診日期 ${formattedEnddate}`);
+            alert(`成功通知 ${panme} 回診日期 ${formattedEnddate}`);
             // Update the task in the Gantt chart
             const task = gantt.getTaskByIndex(gantt.getTaskBy("pid", pid)[0].id - 1); // Find task by pid
             if (task) {
@@ -185,7 +185,7 @@ function sendNotification(pid, panme, enddate, prescriptionId) {
     <h2>慢性處方箋進度管理</h2>
     <h3>總筆數: <%= nonZeroAndNotEmptyPremCount %>   留單: <%= premCount %></h3>
     
-     <a href="http://192.168.68.90:3001/filter" target="_blank">簡易版</a>
+     <a href="http://192.168.68.79:3001/filter" target="_blank">簡易版</a>
     
      <div class="button-container">
     <button id="toggleGrid" class="link-button">隱藏/顯示甘特圖</button>
@@ -202,7 +202,7 @@ function sendNotification(pid, panme, enddate, prescriptionId) {
         align: "center", 
         width: 110,
         template: function(task) {
-            return `<a href="http://192.168.68.90:3001/searchPrescriptions?pid=${task.pid}" target="_blank">${task.pid}</a>`;
+            return `<a href="http://192.168.68.79:3001/searchPrescriptions?pid=${task.pid}" target="_blank">${task.pid}</a>`;
         }
         },
 

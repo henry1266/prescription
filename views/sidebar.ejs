@@ -1,7 +1,13 @@
 <style>
+  
+    body {
+            padding-top: 50px;
+            
+        }
     /* 設置左側常駐連結區域樣式 */
     .sidebar {
       position: fixed;
+      margin-top: 0;
       left: 0;
       width: 170px;
       height: 100%;
@@ -11,10 +17,6 @@
       box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     }
 
-    .sidebar h2 {
-      font-size: 18px;
-      margin-top: 0;
-    }
 
     .sidebar ul {
       list-style-type: none;
@@ -49,30 +51,79 @@
 </style>
 <script>
     // 获取当前日期
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，+1，并保证是两位数
-    const day = String(today.getDate()).padStart(2, '0'); // 保证是两位数
-    const baseUrl = "http://192.168.68.90:3001/calendar";
-    const dynamicUrl = `${baseUrl}/${year}/${month}`;
-    const formattedDate = `${year}-${month}-${day}`;
+    const today1 = new Date();
+    const year1 = today1.getFullYear();
+    const month1 = String(today1.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，+1，并保证是两位数
+    const day1 = String(today1.getDate()).padStart(2, '0'); // 保证是两位数
+    const baseUrl = "http://192.168.68.79:3001/dashboard";
+    const dynamicUrl = `${baseUrl}/${year1}/${month1}`;
+    
+    //const formattedDate = `${year1}-${month1}-${day1}`;
+    // 將 URL 設置到超連結
+
 </script>
+
+<!-- 導航欄 -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <a class="navbar-brand" href="/">首頁</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" id="dynamic-link" href="#">儀錶板</a>
+        </li>
+        <!-- 其他导航项 -->
+      </ul>
+      
+      <form id="searchForm"> <label for="query"></label> <input type="text" id="query" name="query" required> <button class="btn btn-outline-success" type="submit">查詢</button> </form>
+      
+    </div>
+  </nav>
+
+
+<script>
+document.getElementById('searchForm').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  const query = document.getElementById('query').value;
+
+  const response = await fetch(`/searchPrescription?query=${query}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const result = await response.json();
+
+  if (result.errorMessage) {
+    alert(result.errorMessage);
+  } else {
+    // 将查询结果存储在本地存储中
+    localStorage.setItem('searchResult', JSON.stringify(result));
+    //alert('Stored search result: ' + JSON.stringify(result));
+    // 跳转到结果页面
+    window.location.href = '/result';
+  }
+});
+
+
+</script>
+
 <div class="sidebar">
-  <h2>竹文常用連結</h2>
 <ul>
-    <li><a href="/">首頁</a></li>
+    <li class="no-link">常用連結</li>
     <hr> <!-- 分隔线 -->
     <li class="no-link">慢箋</li>
     <li><a href="/gantt" target="_blank">甘特追蹤</a></li>
-    <li><a href="/manageprescription">處方管理</a></li>
-    <li><a href="http://192.168.68.90:7000/" target="_blank">line發送訊息</a></li>
+    <li><a href="/manageprescription">到期處方管理</a></li>
+    <li><a href="/manageprescription2">未到處方管理</a></li>
     <hr> <!-- 分隔线 -->
     <li class="no-link">查詢</li>
       <li><a href="/search">處方查詢</a></li>
     <hr> <!-- 分隔线 -->
       <li class="no-link">數據</li>
-      <li><a href="/dashboard">儀錶板</a></li>
-      <li><a id="dynamic-link" href="#">自動跳轉日曆</a></li>
       <li><a href="/weeks/2024/11/21">日曆走勢</a></li>
     <hr> <!-- 分隔线 -->
     <li class="no-link">庫存</li>
@@ -85,3 +136,8 @@
     <li><a href="https://zhuwen.com.tw/line/linechat.php" target="_blank">linechat</a></li>
 </ul>
 </div>
+<script>
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    </script>

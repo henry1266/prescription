@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <%- include('js') %>
   <title>處方成本結果</title>
-  <link rel="stylesheet" href="/css/styles.css">
+
  
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
+   .price {
+    position: fixed;
+    top: 3rem;
+    right: 3rem;
+    font-size:1.2rem;
+  }
   .price table {
     width: 100%;
     border-collapse: collapse;
@@ -33,35 +36,69 @@
   .price td {
     width: 25%; /* 調整單元格寬度，使表格變寬 */
   }
+
+  .fixed-chart {
+    position: fixed;
+    top: 18rem;
+    right: 4rem;
+    width: 34rem;
+    height: 30rem;
+  }
+
+  .content {
+      flex: 3;
+      padding: 20px;
+    }
+    
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      
+      max-width: 750px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 4px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
 </style>
 </head>
 
 <body>
-  <h1>處方成本結果 - 從 <%= startDate %> 到 <%= endDate %></h1>
+  <%- include('sidebar') %>
+  <div class="content">
 
-<div id="pretypeFilter">
-  <label>
-    <input type="radio" name="pretypeFilter" value="all" onclick="updatePretypeFilter('all')" checked>
-    全部
-  </label>
-  <label>
-    <input type="radio" name="pretypeFilter" value="01" onclick="updatePretypeFilter('01')">
-    01一般
-  </label>
-  <label>
-    <input type="radio" name="pretypeFilter" value="02" onclick="updatePretypeFilter('02')">
-    02藥水
-  </label>
-  <label>
-    <input type="radio" name="pretypeFilter" value="03" onclick="updatePretypeFilter('03')">
-    03其他
-  </label>
-  <label>
-    <input type="radio" name="pretypeFilter" value="04" onclick="updatePretypeFilter('04')">
-    04慢箋
-  </label>
-</div>
+    <h3>處方成本 - 從 <%= startDate %> 到 <%= endDate %></h3>
 
+    <div id="pretypeFilter">
+      <label>
+      <input type="radio" name="pretypeFilter" value="all" onclick="updatePretypeFilter('all')" checked>
+        全部
+      </label>
+      <label>
+        <input type="radio" name="pretypeFilter" value="01" onclick="updatePretypeFilter('01')">
+        01一般
+      </label>
+      <label>
+      <input type="radio" name="pretypeFilter" value="02" onclick="updatePretypeFilter('02')">
+      02藥水
+      </label>
+      <label>
+      <input type="radio" name="pretypeFilter" value="03" onclick="updatePretypeFilter('03')">
+      03其他
+      </label>
+      <label>
+        <input type="radio" name="pretypeFilter" value="04" onclick="updatePretypeFilter('04')">
+        04慢箋
+      </label>
+    </div>
+  
   <table border="1">
     <thead>
       <tr>
@@ -72,8 +109,11 @@
       <!-- This table will be dynamically populated with filtered prescriptions -->
     </tbody>
   </table>
-  <a href="/">返回主頁</a>
-<div class="price">
+  
+  </div>
+  
+  
+  <div class="price">
   <table border="1">
   <tr>
     <th>類別</th><th>總成本</th><th>平均價格</th><th>總人數</th>
@@ -108,10 +148,13 @@
     <td>無數據</td>
     <td id="totalPatients"><strong>0</strong></td>
   </tr>
-</table>
-</div>
+  </table>
+  </div>
+
+
 
 <script>
+    
     let myChart; // Declare globally
 
   function updatePretypeFilter(option) {
@@ -133,11 +176,11 @@ function renderSortedPrescriptions(sortedPrescriptions) {
     const prescriptionRow = `
       <tr>
         <td>
-          <button onclick="togglePrescription('${prescription._id}')">展開/收合</button>
+          <button onclick="togglePrescription('${prescription._id}')">+/-</button>
         </td>
         <td>${prescription.predate}</td>
         <td>${prescription.presec}</td>
-        <td>${prescription.prescriptionTotalCost.toFixed(2)}</td>
+        <td>${prescription.prescriptionTotalCost}</td>
 <td colspan="6" class="prescription-info"
     style="
             ${prescription.pvip === 'yes' ? 'color: orange;' : 
@@ -145,7 +188,7 @@ function renderSortedPrescriptions(sortedPrescriptions) {
               prescription.pretype === '03' ? 'color: purple;' :
               prescription.pretype === '02' ? 'color: green;' :  
                 (prescription.prescriptionTotalCost > 66 ? 'color: red;' : ''))}">
-  <span id="patient-info-${prescription._id}">${prescription.pretype}姓名: ${prescription.pname}   <a href="http://192.168.68.90:3001/searchPrescriptions?pid=${prescription.pid}" target="_blank">身分證: ${prescription.pid}</a></span>
+  <span id="patient-info-${prescription._id}">${prescription.pretype}姓名: ${prescription.pname}   <a href="http://192.168.68.79:3001/searchPrescriptions?pid=${prescription.pid}" target="_blank">身分證: ${prescription.pid}</a></span>
 </td>
        <td>
        <button onclick="deletePrescription('${prescription._id}')">Delete</button>
@@ -166,8 +209,8 @@ function renderSortedPrescriptions(sortedPrescriptions) {
                 <td>${drug.dname}</td>
                 <td>${drug.dinsuranceCode}</td>
                 <td>${drug.dcount}</td>
-                <td>${drug.dcost}</td>
-                <td>${drug.totalCost}</td>
+                <td>${drug.dcost ? drug.dcost.toFixed(1) : '0.0'}</td>
+                <td>${drug.totalCost ? drug.totalCost.toFixed(1) : '0.0'}</td>
               </tr>`).join('')}
           </table>
         </td>

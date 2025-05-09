@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>查詢结果</title>
+  <%- include('js') %>
   <style>
+
     body {
       display: flex;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    .content {
-      flex: 3;
-      padding: 20px;
     }
 
     .hidden {
@@ -26,10 +20,11 @@
   </style>
 </head>
 <body>
-  <div class="content">
+  <%- include('sidebar') %>
+  <<div class="content" id="result">
     <!-- 显示患者姓名和身份证号 -->
     <div>
-      <h2>患者姓名: <%= pname %> - 身分證號: <%= pid %></h2>
+      <h3>患者姓名: <%= pname %> - 身分證號: <%= pid %></h3>
     </div>
 
     <% if (errorMessage) { %>
@@ -60,7 +55,7 @@
 
               <tr id="prescription-<%= prescription._id %>" style="display: none;">
                 <td colspan="7">
-                  <table border="1" width="100%">
+                  <table border="1" width="100%" style="background-color: #FFF9E6;">
                     <tr>
                       <th>藥品名稱</th>
                       <th>健保碼</th>
@@ -77,26 +72,38 @@
                     <% }) %>
                   </table>
 
-                  <h3>修改處方資訊</h3>
+                  <h4>修改處方資訊</h4>
                   <form action="/updatePrescription/<%= prescription._id %>" method="POST">
                     <input type="hidden" name="pid" value="<%= pid %>">
                     <div>
                       <label for="pretype">處方案類:</label>
                       <input type="text" name="pretype" id="pretype" value="<%= prescription.pretype || '' %>">
 					  					 <label for="precount">處方次數:</label>
-                      <input type="text" name="precount" id="precount" value="<%= prescription.precount || '' %>"><br>
+                      <select name="precount" id="precount">
+                        <option value="1" <%= !prescription.precount ? 'selected' : '' %>>1</option>
+                        <option value="2" <%= prescription.precount == 2 ? 'selected' : '' %>>2</option>
+                        <option value="3" <%= prescription.precount == 3 ? 'selected' : '' %>>3</option>
+                        <option value="4" <%= prescription.precount == 4 ? 'selected' : '' %>>4</option>
+                      </select><br>
             <label for="prem">處方類型:</label>
-                      <input type="text" name="prem" id="prem" value="<%= prescription.prem || '' %>">
-					  <label for="preday">處方天數:</label>
+                      <select name="prem" id="prem">
+                        <option value="1" <%= prescription.prem == 1 ? 'selected' : '' %>>1</option>
+                        <option value="0" <%= prescription.prem == 0 ? 'selected' : '' %>>0</option>
+                        <option value="-1" <%= prescription.prem == -1 ? 'selected' : '' %>>-1</option>
+                        <option value="-2" <%= prescription.prem == -2 ? 'selected' : '' %>>-2</option>
+                      </select>
+					  
+            
+            <label for="preday">處方天數:</label>
                       <input type="text" name="preday" id="preday" value="<%= prescription.preday || '' %>"><br>
           <hr>
-<div>
+    <div>
     <label for="predate2">第二次:</label>
     <input type="text" name="predate2" id="predate2" value="<%= prescription.predate2 || '' %>">
     
     <label for="predate3">第三次:</label>
     <input type="text" name="predate3" id="predate3" value="<%= prescription.predate3 || '' %>"><br>
-  </div>
+    </div>
    <hr>                 
 					<% prescription.drug.forEach(function(drug, index) { %>
                       <div>
@@ -121,7 +128,7 @@
     <a href="/">返回主頁面</a>
   </div>
 
-  <div class="sidebar">
+  <div class="sidebar2">
     <h3>病人基本信息</h3>
     <form action="/updatePatient/<%= pid %>" method="POST">
         <div class="form-group">
@@ -157,18 +164,18 @@
 </div>
 
 <style>
-    .sidebar {
-        flex: 1;
+.sidebar2 {
         background-color: #f9f9f9;
         padding: 20px;
         border-left: 1px solid #ddd;
         border-radius: 8px;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        max-width: 400px;
-        margin: auto;
+        min-width: 370px;
+        right: 1px;
+        position: fixed;
     }
 
-    .sidebar h3 {
+    .sidebar2 h3 {
         text-align: center;
         margin-bottom: 20px;
         font-size: 1.5rem;

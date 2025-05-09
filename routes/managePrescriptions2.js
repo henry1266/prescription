@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const client = require('../utils/db'); // 引入 MongoDB 客戶端
+
 const axios = require('axios');
 // 配置 LINE Bot 的存取權杖
 const accessToken = 'exoanGGQhg1U2w5LDl4RJwHYAKezrU1MY9BUTTFuVVyu9srVXbJoV6HiF3t3Nm9q72myd6cHjsoSMqx3vf8D/M/J5PopwJFsgMJy3qYvoyG/icHwWVIUsZkbyWhUUyW0/CK4hVnqXR/Vjsa3IP8COAdB04t89/1O/w1cDnyilFU=';
@@ -63,11 +64,11 @@ router.get('/', async (req, res) => {
         }, { beforeToday: [], afterToday: [] });
 
         // 对每组数据按 value 排序
-        groupedPrescriptions.beforeToday.sort((a, b) => b.value - a.value);
+        groupedPrescriptions.beforeToday.sort((a, b) => a.value - b.value);
         groupedPrescriptions.afterToday.sort((a, b) => a.value - b.value);
 
         // 将数据传递给 manageprescription.ejs
-        res.render('manageprescription', { prescriptions: groupedPrescriptions });
+        res.render('manageprescription2', { prescriptions: groupedPrescriptions });
     } catch (error) {
         console.error("Error fetching prescriptions or patient data:", error);
         res.status(500).send("Internal Server Error");
@@ -101,8 +102,9 @@ router.post('/update_prei/:id', async (req, res) => {
 
 // 發送領藥通知
 router.post('/send_message', async (req, res) => {
-    const { pline, panme, startdate, enddate, id, precount, prescriptionId , check} = req.body;
+    const { pline, panme, startdate, enddate, id, precount, check, prescriptionId } = req.body;
     //console.log(req.body);
+
     if (!pline || !panme) {
         res.send('聊天室ID或訊息內容不得為空！');
         return;
@@ -231,5 +233,6 @@ router.post('/send_message', async (req, res) => {
         await client.close();
     }
 });
+
 
 module.exports = router;

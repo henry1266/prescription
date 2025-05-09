@@ -1,12 +1,10 @@
 const express = require('express');
-const moment = require('moment');
-const { MongoClient } = require('mongodb');
 const router = express.Router();
+const moment = require('moment');
+const client = require('../utils/db'); // 引入 MongoDB 客戶端
 
-const uri = "mongodb://localhost:27017"; // MongoDB 連接 URI
-const client = new MongoClient(uri);
+router.get('/:year/:month', async (req, res) => {
 
-router.get('/', async (req, res) => {
     try {
         await client.connect();
         const db = client.db("pharmacy");
@@ -14,12 +12,9 @@ router.get('/', async (req, res) => {
 
         // 設置日期範圍，這裡以當前日期為基準
         const endDate = moment();
-        
         const startDate = moment().subtract(8 * 7 - 1, 'days');
 
-        
         const endDateFormatted = endDate.format('YYYYMMDD');
-        //console.log( endDateFormatted);
         const startDateFormatted = startDate.format('YYYYMMDD');
         // 計算該月份的開始和結束日期
      
@@ -65,8 +60,12 @@ router.get('/', async (req, res) => {
             weeklySums.push(weekSum);
         }
         
-        const firstDate = moment().startOf('month').format('YYYYMMDD');
-        const lastDate = moment().endOf('month').format('YYYYMMDD');
+        const year = parseInt(req.params.year);
+        const month = parseInt(req.params.month) - 1; // Moment.js 的月份從 0 開始
+        // 計算該月份的開始和結束日期
+        const firstDate = moment([year, month]).startOf('month').format('YYYYMMDD');
+        const lastDate = moment([year, month]).endOf('month').format('YYYYMMDD');
+        
         
         // 聚合查詢：根據 `predate` 分組並計算每天的處方數
         const data1 = await prescriptions.aggregate([
@@ -98,8 +97,8 @@ router.get('/', async (req, res) => {
         });
         
         // 迭代當月的所有日期
-        for (let day = 1; day <= moment().daysInMonth(); day++) {
-            const date = moment().date(day).format('YYYYMMDD'); // 格式化當日日期
+            for (let day = 1; day <= moment(firstDate, 'YYYYMMDD').daysInMonth(); day++) {
+            const date = moment([year, month]).date(day).format('YYYYMMDD');
             const prescriptionCount = dataMap.get(date) || 0; // 查找該日的處方數量
         
             // 添加到日曆數據

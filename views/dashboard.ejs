@@ -1,42 +1,26 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <title>處方數儀表板</title>
+    <title>處方數儀表板1</title>
     <%- include('js') %>
     
     <style>
         /* 自定義樣式 */
         body {
-            padding-top: 56px;
             background-color: #1a1a2e; /* 深色背景 */
             color: #ffffff; /* 字體顏色 */
-            font-family: 'Roboto', sans-serif;
         }
-        .chart-container1 {
-            width: 24rem; /* 調整圖表容器寬度 */
-            margin-top: 1rem;
-            margin-right: 1rem;
+        
+        .charts-wrapper {
+            position: fixed;
+            right: 3rem;
+            width: 24rem;
+            top: 21rem; /* 距離頁面頂部 10px */
+            height: 15rem; /* 圖表高度 */
             color: 'white';
         }
-        .chart-container2{
-            width: 24rem; /* 調整圖表容器寬度 */
-            margin-top: 1rem;
-            margin-right: 1rem;
-            color: 'white', // 圖表標題文字顏色
-        }
-        .charts-wrapper {
-            position: absolute; /* 使用絕對定位 */
-            top: 15rem;
-            right: 3rem;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start; /* 保持圖表左對齊 */
-        }
-        .sidebar {
-            background-color: #f8f9fa;
-            height: 100vh;
-            position: fixed;
-        }
+        
+
         .fixed-chart {
       position: fixed;
       top: 5rem; /* 距離頁面頂部 10px */
@@ -44,22 +28,20 @@
       width: 24rem; /* 圖表寬度 */
       height: 15rem; /* 圖表高度 */
     }
-    </style>
-    <style>
+
     /* 美化日曆表格 */
     .calendar {
         width: 90%;
         max-width: 35rem;
-        margin: 9px auto;
+        margin-left: 3rem;
+        margin-top: 1rem;
         border-collapse: collapse;
         text-align: center;
         background-color: rgba(255, 255, 255, 0.0);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         border-radius: 8px;
         overflow: hidden;
-        position: relative;
-        left: 1rem;
-        top: 2rem;
+        position: fixed;
     }
 
     /* 表格標題行 */
@@ -127,34 +109,50 @@
         border: 2px solid #FFA500; /* 橙色邊框 */
         font-weight: bold;
     }
+    /* 按钮样式 */
+        .month-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 28.3rem;
+            margin-right: 16rem;
+        }
+        .month-buttons button {
+            background-color: #5C9EAD;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.2rem 18px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0 10px;
+            z-index: 1000; /* 設置一個較高的數值 */
+        }
+        .month-buttons button:hover {
+            background-color: #487C8A;
+        }
 </style>
 </head>
 <body>
     <%- include('sidebar') %>
     <script>
     // 將 URL 設置到超連結
-    const dynamicLink = document.getElementById("dynamic-link");
-    dynamicLink.href = dynamicUrl;
-    dynamicLink.textContent = `${year}-${month} 月處方數`;
+    dynamicLink.textContent = `${year}-${month} 月月月月處方數`;
 
     // 设置预设值到日期输入框
 	document.getElementById('predate').value = formattedDate;
 	document.getElementById('startdate').value = formattedDate;
 	document.getElementById('enddate').value = formattedDate;
 
-
   </script>
-    <!-- 導航欄 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <a class="navbar-brand" href="#">處方數儀表板</a>
-    </nav>
 
-    <div class="container-fluid">
-        <div class="row">
+
+ <div class="container-fluid">
+    <div class="row">
             
             <!-- 主內容區域 -->
             <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
 
+                               
                 <!-- 縮小並移動到右上角的圖表 -->
                 <div class="charts-wrapper">
                     <div class="chart-container1">
@@ -168,41 +166,11 @@
                 
                 <!-- 主內容可以添加更多的圖表或數據展示 -->
 
-                </div>
-            </main>
-        </div>
-    </div>
- 
-
-<!-- 通知窗格 -->
-    <div style="width: 15rem; display: flex; flex-direction: column; gap: 15px;margin-left: 15rem;margin-top: 3rem;">
-        <!-- 領藥通知 -->
-        <div style="background-color: rgba(75, 192, 192, 0.5); border-radius: 8px; padding: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-            <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 10px 0; text-align: center;">領藥通知</h3>
-            <ul style="list-style: none; padding: 0; margin: 0; color: rgba(255, 255, 255, 0.8);">
-                <li style="padding: 5px 0;">張三 - 2025-02-25  - 通知</li>
-                <li style="padding: 5px 0;">李四 - 2025-02-26  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-            </ul>
-        </div>
-        <!-- 回診通知 -->
-        <div style="background-color: rgba(75, 192, 192, 0.5); border-radius: 8px; padding: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-            <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 10px 0; text-align: center;">回診通知</h3>
-            <ul style="list-style: none; padding: 0; margin: 0; color: rgba(255, 255, 255, 0.8);">
-                <li style="padding: 5px 0;">陳六 - 2025-02-24  - 通知</li>
-                <li style="padding: 5px 0;">趙七 - 2025-02-27  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
-            </ul>
-        </div>
-    </div>
-
-
-
-<div style="max-width: 40rem; margin: 0 auto; position: relative; top: -30rem;">
+                <%- include('dashboard1') %>
+                
+                
+         <!-- 區塊3 -->
+<div style="max-width: 40rem; margin: 0 auto; margin-top: -28rem;margin-left: 18rem;">
     <!-- 顯示 YYYY-MM 和月總數 -->
     <div style="text-align: center; margin-bottom: 10px; color: #ffffff; font-size: 1.2rem; font-weight: bold;">
         <% 
@@ -250,13 +218,18 @@
                             weekSum += prescriptionCount; // 累加當週總和
                     %>
                             <td class="day-cell <%= isToday ? 'today' : '' %>">
-                                <div class="day"><%= currentDay %></div>
+                                <div class="day">
+                                    <a href="#" onclick="goToDailyChart('<%= date.format('YYYY-MM-DD') %>')">
+                                        <%= currentDay %>
+                                    </a>
+                                </div>
                                 <div class="count"><%= prescriptionCount %> 張</div>
                             </td>
                     <% 
                             currentDay++;
                         } 
                     } 
+                    
                     weeklyTotals.push(weekSum); // 儲存當週總和
                     %>
                     <!-- 將週加總作為第七欄 -->
@@ -279,12 +252,80 @@
             </tr>
         </tfoot>
     </table>
-</div>
+
+</div>       
+     <!-- 月份切换按钮 -->
+        <div class="month-buttons">
+            <button class="nav-btn" onclick="goToPreviousMonth()">上一個月</button>
+            <button class="nav-btn" onclick="goToNextMonth()">下一個月</button>
+        </div>               
+                
+                
+
+        </main>
+    </div>
+</div>   
+ 
+
+
+<script>
+        function goToDailyChart(date) {
+        const url = `http://192.168.68.79:3001/customer-time-chart?predate=${date}`;
+        window.location.href = url;
+        }
+        function goToPreviousMonth() {
+            const currentUrl = window.location.href;
+            const match = currentUrl.match(/dashboard\/(\d{4})\/(\d{1,2})/);
+            if (match) {
+                const currentYear = parseInt(match[1], 10);
+                const currentMonth = parseInt(match[2], 10);
+                let prevYear = currentYear;
+                let prevMonth = currentMonth - 1;
+                if (prevMonth < 1) {
+                    prevMonth = 12;
+                    prevYear -= 1;
+                }
+                const prevUrl = `http://192.168.68.79:3001/dashboard/${prevYear}/${prevMonth}`;
+                window.location.href = prevUrl;
+            } else {
+                alert("URL 格式不正確，無法計算上一個月。");
+            }
+        }
+
+        function goToNextMonth() {
+            const currentUrl = window.location.href;
+            const match = currentUrl.match(/dashboard\/(\d{4})\/(\d{1,2})/);
+            if (match) {
+                const currentYear = parseInt(match[1], 10);
+                const currentMonth = parseInt(match[2], 10);
+                let nextYear = currentYear;
+                let nextMonth = currentMonth + 1;
+                if (nextMonth > 12) {
+                    nextMonth = 1;
+                    nextYear += 1;
+                }
+                const nextUrl = `http://192.168.68.79:3001/dashboard/${nextYear}/${nextMonth}`;
+                window.location.href = nextUrl;
+            } else {
+                alert("URL 格式不正確，無法計算下一個月。");
+            }
+        }
+
+        function goToDailyChart(date) {
+            const url = `http://192.168.68.79:3001/calculate?startdate=${date}&enddate=${date}`;
+            window.location.href = url;
+        }
+    </script>
+
+
+
+<!-- 區塊4 -->
 
 <div class="fixed-chart" >
     <canvas id="timeChart" style="width: 100%; height: 100%;"></canvas>
    
     <script>
+        
         // 週總和數據
         const weeklySums = <%= JSON.stringify(weeklySums) %>;
 
@@ -443,6 +484,7 @@
             }
         });
         
+//<!-- 區塊5 -->
 // 將時間數據轉換為小時進行計數
 const times = <%- JSON.stringify(times) %>;
 const hoursCount = new Array(24).fill(0);

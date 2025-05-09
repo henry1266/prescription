@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>查詢结果</title>
+  <%- include('js') %>
+  <style>
+    body {
+      display: flex;
+    }
+    .content {
+      flex: 3;
+      padding: 20px;
+    }
+    
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    details {
+      margin-bottom: 10px;
+    }
+    summary {
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .prescription-info {
+  
+      max-width: 700px;
+      padding: 6px;
+    }
+
+    .sidebar2 {
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-left: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        min-width: 370px;
+        right: 1px;
+        position: fixed;
+    }
+
+    .sidebar2 h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+        background-color: #fff;
+        box-sizing: border-box;
+    }
+
+    .form-group input:disabled {
+        background-color: #e9ecef;
+    }
+
+
+    .btn-submit {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .btn-submit:hover {
+        background-color: #0056b3;
+    }
+</style>
+</head>
+<body>
+  <%- include('sidebar') %>
+  <div class="content" id="result"></div>
+
+  <div class="sidebar2">
+    <h3>病人基本信息</h3>
+    <form id="patientForm" action="/updatePatient" method="POST">
+      <div class="form-group">
+        <label for="pname">姓名:</label>
+        <input type="text" id="pname" name="pname">
+      </div>
+      <div class="form-group">
+        <label for="pid">身份證號:</label>
+        <input type="text" id="pid" name="pid" disabled>
+      </div>
+      <div class="form-group">
+        <label for="pdate">生日:</label>
+        <input type="text" id="pdate" name="pdate">
+      </div>
+      <div class="form-group">
+        <label for="pvip">VIP 等級:</label>
+        <input type="text" id="pvip" name="pvip">
+      </div>
+      <div class="form-group">
+        <label for="pphone">電話:</label>
+        <input type="text" id="pphone" name="pphone">
+      </div>
+      <div class="form-group">
+        <label for="pline">官方 Line:</label>
+        <input type="text" id="pline" name="pline">
+      </div>
+      <div class="form-group">
+        <label for="pdetail">細節:</label>
+        <textarea id="pdetail" name="pdetail"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">更新病人信息</button>
+    </form>
+  </div>
+
+  <script>
+    // 从本地存储中获取查询结果
+    const result = JSON.parse(localStorage.getItem('searchResult'));
+    if (result) {
+      const resultDiv = document.getElementById('result');
+      
+      let content = `<h2>患者姓名: ${result.pname} - 身分證: ${result.pid}</h2>`;
+      
+      content += `<h4>處方信息:</h4>`;
+      //alert(content);
+      result.prescriptions.forEach((prescription, index) => {
+        content += `
+          <details class="prescription-info">
+            <summary> ${index + 1} - 日期: ${prescription.predate} - 總成本: ${prescription.prescriptionTotalCost}</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th>藥品</th>
+                  <th>健保碼</th>
+                  <th>頻率</th>
+                  <th>數量</th>
+                  <th>總價</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${prescription.drug.map(drug => `
+                  <tr>
+                    <td>${drug.dname}</td>
+                    <td>${drug.dinsuranceCode}</td>
+                    <td>${drug.df}</td>
+                    <td>${drug.dcount}</td>
+                    <td>${drug.totalCost ? drug.totalCost.toFixed(1) : '0.0'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </details>
+        `;
+      });
+      resultDiv.innerHTML = content;
+      //alert(content);
+      // 设置表单字段的值
+      document.getElementById('pname').value = result.pname || '';
+      document.getElementById('pid').value = result.pid || '';
+      document.getElementById('pdate').value = result.pdate || '';
+      document.getElementById('pvip').value = result.pvip || '';
+      document.getElementById('pphone').value = result.pphone || '';
+      document.getElementById('pline').value = result.pline || '';
+      document.getElementById('pdetail').value = result.pdetail || '';
+
+      // 设置表单的action
+      document.getElementById('patientForm').action = `/updatePatient/${result.pid}`;
+    } else {
+      alert('没有找到相关处方信息');
+    }
+  </script>
+</body>
+</html>

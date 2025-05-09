@@ -1,9 +1,8 @@
 /* 表格样式 */
 table {
     border-collapse: collapse;
-    margin: 15px auto;
-    width: 90%; /* 表格宽度 */
-
+    margin: 20px auto;
+    width: 60%; /* 表格宽度 */
 }
 th, td {
     border: 1px solid #ddd;

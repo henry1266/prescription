@@ -3,7 +3,7 @@ const router = express.Router();
 const { MongoClient } = require('mongodb');
 
 router.get('/', async (req, res) => {
-  const client = new MongoClient('mongodb://localhost:27017');
+  const client = new MongoClient('mongodb://192.168.68.79:27017');
 
   try {
     await client.connect();

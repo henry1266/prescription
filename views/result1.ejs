@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢结果</title>
+  <style>
+    body {
+      display: flex;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    .content {
+      flex: 3;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+    .prescription-info {
+      display: flex;
+      justify-content: space-between;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="content">
+    <!-- 显示患者姓名和身份证号 -->
+    <div>
+      <h2>患者姓名: <%= pname %> - 身分證號: <%= pid %></h2>
+    </div>
+
+    <% if (errorMessage) { %>
+      <h2 style="color: red;"><%= errorMessage %></h2>
+    <% } else { %>
+      <button id="toggleAllBtn" onclick="toggleAllPrescriptions()">展開所有處方</button>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>操作</th>
+            <th>就診日期</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% Object.keys(prescriptionsByDate).forEach(function(date) { %>
+            <% prescriptionsByDate[date].forEach(function(prescription) { %>
+              <tr>
+                <td>
+                  <button onclick="togglePrescription('<%= prescription._id %>')">展開/收合</button>
+                </td>
+                <td colspan="6" 
+                    class="prescription-info"
+                    style="<%= prescription.prescriptionTotalCost && prescription.prescriptionTotalCost > 66 ? 'color: red;' : '' %>">
+                  <span><%= date %></span>
+                  <span>總成本: <%= prescription.prescriptionTotalCost ? prescription.prescriptionTotalCost.toFixed(2) : '未知' %></span>
+                </td>
+              </tr>
+
+              <tr id="prescription-<%= prescription._id %>" style="display: none;">
+                <td colspan="7">
+                  <table border="1" width="100%">
+                    <tr>
+                      <th>藥品名稱</th>
+                      <th>健保碼</th>
+                      <th>數量</th>
+                      <th>藥品總成本</th>
+                    </tr>
+                    <% prescription.drug.forEach(function(drug, index) { %>
+                      <tr>
+                        <td><%= drug.dname %></td>
+                        <td><%= drug.dinsuranceCode %></td>
+                        <td><%= drug.dcount %></td>
+                        <td><%= drug.totalCost %></td>
+                      </tr>
+                    <% }) %>
+                  </table>
+
+                  <h3>修改處方資訊</h3>
+                  <form action="/updatePrescription/<%= prescription._id %>" method="POST">
+                    <input type="hidden" name="pid" value="<%= pid %>">
+                    <div>
+                      <label for="pretype">處方案類:</label>
+                      <input type="text" name="pretype" id="pretype" value="<%= prescription.pretype || '' %>">
+					  					 <label for="precount">處方次數:</label>
+                      <input type="text" name="precount" id="precount" value="<%= prescription.precount || '' %>"><br>
+            <label for="prem">處方類型:</label>
+                      <input type="text" name="prem" id="prem" value="<%= prescription.prem || '' %>">
+					  <label for="preday">處方天數:</label>
+                      <input type="text" name="preday" id="preday" value="<%= prescription.preday || '' %>"><br>
+          <hr>
+<div>
+    <label for="predate2">第二次:</label>
+    <input type="text" name="predate2" id="predate2" value="<%= prescription.predate2 || '' %>">
+    
+    <label for="predate3">第三次:</label>
+    <input type="text" name="predate3" id="predate3" value="<%= prescription.predate3 || '' %>"><br>
+  </div>
+   <hr>                 
+					<% prescription.drug.forEach(function(drug, index) { %>
+                      <div>
+                        <label>藥品名稱: <%= drug.dname %></label><br>
+                        <label>數量: </label>
+                        <input type="number" name="drug[<%= index %>][dcount]" value="<%= drug.dcount %>"><br>
+                        <label>頻率: </label>
+                        <input type="text" name="drug[<%= index %>][df]" value="<%= drug.df %>"><br>
+                        <input type="hidden" name="drug[<%= index %>][dinsuranceCode]" value="<%= drug.dinsuranceCode %>">
+                      </div>
+                      <hr>
+                    <% }) %>
+                    <button type="submit">提交修改</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+    <a href="/">返回主頁面</a>
+  </div>
+
+  <div class="sidebar">
+    <h3>病人基本信息</h3>
+    <form action="/updatePatient/<%= pid %>" method="POST">
+        <div class="form-group">
+            <label for="pname">姓名:</label>
+            <input type="text" id="pname" name="pname" value="<%= pname || '' %>">
+        </div>
+        <div class="form-group">
+            <label for="pid">身份證號:</label>
+            <input type="text" id="pid" name="pid" value="<%= pid || '' %>" disabled>
+        </div>
+        <div class="form-group">
+            <label for="pdate">生日:</label>
+            <input type="text" id="pdate" name="pdate" value="<%= pdate || '' %>">
+        </div>
+        <div class="form-group">
+            <label for="pvip">VIP 等級:</label>
+            <input type="text" id="pvip" name="pvip" value="<%= pvip || '' %>">
+        </div>
+        <div class="form-group">
+            <label for="pphone">電話:</label>
+            <input type="text" id="pphone" name="pphone" value="<%= pphone || '' %>">
+        </div>
+        <div class="form-group">
+            <label for="pline">官方 Line:</label>
+            <input type="text" id="pline" name="pline" value="<%= pline || '' %>">
+        </div>
+        <div class="form-group">
+            <label for="pdetail">細節:</label>
+            <textarea id="pdetail" name="pdetail"><%= pdetail || '' %></textarea>
+        </div>
+        <button type="submit" class="btn-submit">更新病人信息</button>
+    </form>
+</div>
+
+<style>
+    .sidebar {
+        flex: 1;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-left: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        margin: auto;
+    }
+
+    .sidebar h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        color: #333;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+        background-color: #fff;
+        box-sizing: border-box;
+    }
+
+    .form-group input:disabled {
+        background-color: #e9ecef;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .btn-submit {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .btn-submit:hover {
+        background-color: #0056b3;
+    }
+</style>
+
+
+  <script>
+    function togglePrescription(id) {
+      const row = document.getElementById('prescription-' + id);
+      row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    }
+
+    function toggleAllPrescriptions() {
+      const allElements = document.querySelectorAll('tr[id^="prescription-"]');
+      const toggleBtn = document.getElementById('toggleAllBtn');
+      const isAllHidden = [...allElements].every(el => el.style.display === 'none');
+
+      allElements.forEach(el => {
+        el.style.display = isAllHidden ? 'table-row' : 'none';
+      });
+
+      toggleBtn.innerText = isAllHidden ? '收合所有处方' : '展开所有处方';
+    }
+  </script>
+</body>
+</html>

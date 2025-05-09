@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>檢驗報告結果</title>
+  <style>
+    button {
+      margin-right: 10px;
+    }
+    .report-info {
+      display: flex;
+      justify-content: space-between;
+    }
+    .fixed-chart, .fixed-chart-grouped-stack {
+      position: fixed;
+      top: 5rem;
+      right: 5rem;
+      width: 25rem;
+      height: 20rem;
+      background: rgba(255, 255, 255, 1);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,1);
+      overflow: auto;
+    }
+    .fixed-chart-grouped-stack {
+      top: 30rem; /* Adjust position below the first chart */
+    }
+  </style>
+  <!-- Include Chart.js and Annotation Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+
+</head>
+<body>
+ 
+  <h1>檢驗報告結果 - 從 <%= startDate %> 到 <%= endDate %></h1>
+
+  <!-- DevicePixelRatio selection dropdown -->
+  <label for="pixelRatioSelect">選擇解析度：</label>
+  <select id="pixelRatioSelect" onchange="updateChartResolution()">
+    <option value="1">1 倍</option>
+    <option value="2">2 倍</option>
+    <option value="3">3 倍</option>
+    <option value="4">4 倍</option>
+  </select>
+
+  <!-- Expand/Collapse All Reports Button -->
+  <button id="toggleAllBtn" onclick="toggleAllReports()">展開所有報告</button>
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>操作</th>
+        <th>病人資訊</th>
+      </tr>
+    </thead>
+    <tbody id="report-table">
+      <!-- Render the reports data -->
+      <% reports.forEach((report, index) => { %>
+        <tr>
+          <td>
+            <button onclick="toggleReport('<%= report._id %>')">展開/收合</button>
+          </td>
+          <td colspan="6" class="report-info">
+            <span>檢驗日期: <%= report.rdate %> - 姓名: <%= report.pname %> - 年齡: <%= report.page %></span>
+            <span style="display: none;" id="patient-info-<%= report._id %>">
+              身分證: <%= report.pid %> - 生日: <%= report.pdate %>
+            </span>
+          </td>
+        </tr>
+        <!-- Test details (hidden by default) -->
+        <tr id="report-<%= report._id %>" style="display: none;">
+          <td colspan="7">
+            <table border="1" width="100%">
+              <tr>
+                <th>檢驗項目</th>
+                <th>健保碼</th>
+                <th>檢驗數值</th>
+              </tr>
+              <% report.test.forEach(test => { %>
+                <tr>
+                  <td><%= test.tname %></td>
+                  <td><%= test.tinsuranceCode %></td>
+                  <td><%= test.tvalue %></td>
+                </tr>
+              <% }) %>
+            </table>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <h2 id="totalReports">檢驗報告總數: <%= reports.length %></h2>
+
+  <a href="/">返回主頁</a>
+
+  <script>
+    let chartInstance = null; // Store the chart instance
+    let selectedPixelRatio = 1; // Default devicePixelRatio
+
+    // Toggle individual report
+    function toggleReport(id) {
+      const row = document.getElementById('report-' + id);
+      const patientInfo = document.getElementById('patient-info-' + id);
+
+      if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        patientInfo.style.display = 'inline';
+      } else {
+        row.style.display = 'none';
+        patientInfo.style.display = 'none';
+      }
+    }
+
+    // Toggle all reports
+    function toggleAllReports() {
+      const rows = document.querySelectorAll('tr[id^="report-"]');
+      const toggleBtn = document.getElementById('toggleAllBtn');
+      const expandAll = toggleBtn.innerText === '展開所有報告';
+
+      rows.forEach(row => {
+        const patientInfo = document.getElementById('patient-info-' + row.id.replace('report-', ''));
+        row.style.display = expandAll ? 'table-row' : 'none';
+        patientInfo.style.display = expandAll ? 'inline' : 'none';
+      });
+
+      toggleBtn.innerText = expandAll ? '收合所有報告' : '展開所有報告';
+    }
+
+// Render Charts
+    function renderCharts(reports) {
+      renderGroupedStackedChart(reports); // 堆叠分组图表
+    }
+
+    // Render grouped stacked chart (age groups combined in one chart)
+    function renderGroupedStackedChart(reports) {
+      const under50Reports = reports.filter(report => report.page < 50); // 50岁以下
+      const over50Reports = reports.filter(report => report.page >= 50); // 50岁以上
+
+      // 分组统计 (A: < 5.7, B: 5.7 <= x < 6.5, C: 6.5 <= x < 8.5, D: >= 8.5)
+      const groupsUnder50 = { A: 0, B: 0, C: 0, D: 0 };
+      const groupsOver50 = { A: 0, B: 0, C: 0, D: 0 };
+
+      // 统计50岁以下的数据
+      under50Reports.forEach(report => {
+        const test = report.test.find(test => test.tinsuranceCode === '09006C');
+        if (test) {
+          const value = parseFloat(test.tvalue);
+          if (value < 5.7) {
+            groupsUnder50.A += 1;
+          } else if (value >= 5.7 && value < 6.5) {
+            groupsUnder50.B += 1;
+          } else if (value >= 6.5 && value < 8.5) {
+            groupsUnder50.C += 1;
+          } else if (value >= 8.5) {
+            groupsUnder50.D += 1;
+          }
+        }
+      });
+
+      // 统计50岁以上的数据
+      over50Reports.forEach(report => {
+        const test = report.test.find(test => test.tinsuranceCode === '09006C');
+        if (test) {
+          const value = parseFloat(test.tvalue);
+          if (value < 5.7) {
+            groupsOver50.A += 1;
+          } else if (value >= 5.7 && value < 6.5) {
+            groupsOver50.B += 1;
+          } else if (value >= 6.5 && value < 8.5) {
+            groupsOver50.C += 1;
+          } else if (value >= 8.5) {
+            groupsOver50.D += 1;
+          }
+        }
+      });
+
+      // 动态创建新的 canvas 元素
+      const canvasContainer = document.querySelector('.fixed-chart-grouped-stack');
+      canvasContainer.innerHTML = '<canvas id="groupedStackedChart" style="width: 100%; height: 100%;"></canvas>';
+      const ctx = document.getElementById('groupedStackedChart').getContext('2d');
+
+      const groupedChartData = {
+        labels: ['< 5.7', '5.7 ≤ x < 6.5', '6.5 ≤ x < 8.5', '≥ 8.5'],
+        datasets: [{
+          label: '50歲以下',
+          data: [groupsUnder50.A, groupsUnder50.B, groupsUnder50.C, groupsUnder50.D],
+          backgroundColor: 'rgba(75, 192, 192)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }, {
+          label: '50歲以上',
+          data: [groupsOver50.A, groupsOver50.B, groupsOver50.C, groupsOver50.D],
+          backgroundColor: 'rgba(153, 102, 255)',
+          borderColor: 'rgba(153, 102, 255, 1)',
+          borderWidth: 1
+        }]
+      };
+
+      const groupedChartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        devicePixelRatio: selectedPixelRatio, // Set devicePixelRatio dynamically
+        scales: {
+          x: { stacked: true }, // X轴堆叠
+          y: { 
+            stacked: true, // Y轴堆叠
+            beginAtZero: true
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: '糖化血色素分組統計'
+          }
+        }
+      };
+
+      // 销毁之前的图表实例（如果有）
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      // 创建新图表实例
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: groupedChartData,
+        options: groupedChartOptions
+      });
+    }
+
+    // Function to download chart as high-resolution image
+    function downloadChart() {
+      const link = document.createElement('a');
+      link.href = document.getElementById('groupedStackedChart').toDataURL('image/png', 1.0);  // Set quality to 1.0 (maximum)
+      link.download = 'chart.png';  // Set file name
+      link.click();  // Trigger download
+    }
+
+    // Function to update chart resolution dynamically
+    function updateChartResolution() {
+      const pixelRatioSelect = document.getElementById('pixelRatioSelect');
+      selectedPixelRatio = Number(pixelRatioSelect.value); // Ensure it's a number
+      const reports = <%- JSON.stringify(reports) %>; // Re-fetch reports data
+      renderCharts(reports); // Re-create the chart with the new resolution
+    }
+
+    // Generate charts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const reports = <%- JSON.stringify(reports) %>;
+      renderCharts(reports);
+    });
+
+  </script>
+
+  <!-- Add canvas elements for the charts -->
+  <div class="fixed-chart-grouped-stack">
+    <canvas id="groupedStackedChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+
+  <!-- Download button -->
+  <button onclick="downloadChart()">下載圖表</button>
+
+</body>
+</html>

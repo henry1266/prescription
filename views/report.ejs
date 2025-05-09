@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>檢驗報告結果</title>
+  <style>
+    button {
+      margin-right: 10px;
+    }
+    .report-info {
+      display: flex;
+      justify-content: space-between;
+    }
+    .fixed-chart, .fixed-chart-grouped, .fixed-chart-under50-grouped, .fixed-chart-over50-grouped {
+      position: fixed;
+      top: 5rem;
+      right: 5rem;
+      width: 25rem;
+      height: 20rem;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      overflow: auto;
+    }
+    .fixed-chart-grouped {
+      top: 30rem; /* Adjust position below the first chart */
+    }
+    .fixed-chart-under50-grouped {
+      top: 30rem; /* Adjust position for the 50岁以下的分组图表 */
+      right: 35rem;
+    }
+    .fixed-chart-over50-grouped {
+      top: 5rem;
+      right: 35rem; 
+    }
+  </style>
+  <!-- Include Chart.js and Annotation Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+  <h1>檢驗報告結果 - 從 <%= startDate %> 到 <%= endDate %></h1>
+
+  <!-- Expand/Collapse All Reports Button -->
+  <button id="toggleAllBtn" onclick="toggleAllReports()">展開所有報告</button>
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>操作</th>
+        <th>病人資訊</th>
+      </tr>
+    </thead>
+    <tbody id="report-table">
+      <!-- Render the reports data -->
+      <% reports.forEach((report, index) => { %>
+        <tr>
+          <td>
+            <button onclick="toggleReport('<%= report._id %>')">展開/收合</button>
+          </td>
+          <td colspan="6" class="report-info">
+            <span>檢驗日期: <%= report.rdate %> - 姓名: <%= report.pname %> - 年齡: <%= report.page %></span>
+            <span style="display: none;" id="patient-info-<%= report._id %>">
+              身分證: <%= report.pid %> - 生日: <%= report.pdate %>
+            </span>
+          </td>
+        </tr>
+        <!-- Test details (hidden by default) -->
+        <tr id="report-<%= report._id %>" style="display: none;">
+          <td colspan="7">
+            <table border="1" width="100%">
+              <tr>
+                <th>檢驗項目</th>
+                <th>健保碼</th>
+                <th>檢驗數值</th>
+              </tr>
+              <% report.test.forEach(test => { %>
+                <tr>
+                  <td><%= test.tname %></td>
+                  <td><%= test.tinsuranceCode %></td>
+                  <td><%= test.tvalue %></td>
+                </tr>
+              <% }) %>
+            </table>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <h2 id="totalReports">檢驗報告總數: <%= reports.length %></h2>
+
+  <a href="/">返回主頁</a>
+
+  <script>
+    // Toggle individual report
+    function toggleReport(id) {
+      const row = document.getElementById('report-' + id);
+      const patientInfo = document.getElementById('patient-info-' + id);
+
+      if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        patientInfo.style.display = 'inline';
+      } else {
+        row.style.display = 'none';
+        patientInfo.style.display = 'none';
+      }
+    }
+
+    // Toggle all reports
+    function toggleAllReports() {
+      const rows = document.querySelectorAll('tr[id^="report-"]');
+      const toggleBtn = document.getElementById('toggleAllBtn');
+      const expandAll = toggleBtn.innerText === '展開所有報告';
+
+      rows.forEach(row => {
+        const patientInfo = document.getElementById('patient-info-' + row.id.replace('report-', ''));
+        row.style.display = expandAll ? 'table-row' : 'none';
+        patientInfo.style.display = expandAll ? 'inline' : 'none';
+      });
+
+      toggleBtn.innerText = expandAll ? '收合所有報告' : '展開所有報告';
+    }
+
+    // Render Charts
+    function renderCharts(reports) {
+      renderChart(reports); // 原始的图表
+      renderGroupedChart(reports); // 原始分组图表
+      renderUnder50GroupedChart(reports); // 小于50岁的分组图表
+      renderOver50GroupedChart(reports); // 大于50岁的分组图表
+    }
+
+    // Render individual report chart
+    function renderChart(reports) {
+      const ctx = document.getElementById('reportChart').getContext('2d');
+      const chartData = {
+        labels: reports.map(report => report.pname), // X-axis: Patient names
+        datasets: [{
+          label: '糖化血色素數值',
+          data: reports.map(report => {
+            const test = report.test.find(test => test.tinsuranceCode === '09006C');
+            return test ? parseFloat(test.tvalue) : 0;
+          }), // Y-axis: 09006C values
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      };
+
+      const chartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true }
+        },
+        plugins: {
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                yMin: 6.5,
+                yMax: 6.5,
+                borderColor: 'red',
+                borderWidth: 2,
+                label: {
+                  content: '6.5',
+                  enabled: true,
+                  position: 'start',
+                  xAdjust: -35,
+                  backgroundColor: 'rgba(255,0,0,0.75)'
+                }
+              },
+              line2: {
+                type: 'line',
+                yMin: 5.7,
+                yMax: 5.7,
+                borderColor: 'orange',
+                borderWidth: 2,
+                label: {
+                  content: '5.7',
+                  enabled: true,
+                  position: 'start',
+                  xAdjust: -35,
+                  backgroundColor: 'rgba(255,128,0,0.75)'
+                }
+              }
+            }
+          }
+        }
+      };
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: chartOptions
+      });
+    }
+
+    // Render grouped chart (for all reports)
+    function renderGroupedChart(reports) {
+      // Define the groups
+      const groups = {
+        A: 0, // < 5.7
+        B: 0, // 5.7 <= x < 6.5
+        C: 0, // 6.5 <= x < 8.5
+        D: 0  // >= 8.5
+      };
+
+      // Categorize each 09006C value into the groups
+      reports.forEach(report => {
+        const test = report.test.find(test => test.tinsuranceCode === '09006C');
+        if (test) {
+          const value = parseFloat(test.tvalue);
+          if (value < 5.7) {
+            groups.A += 1;
+          } else if (value >= 5.7 && value < 6.5) {
+            groups.B += 1;
+          } else if (value >= 6.5 && value < 8.5) {
+            groups.C += 1;
+          } else if (value >= 8.5) {
+            groups.D += 1;
+          }
+        }
+      });
+
+      const ctx = document.getElementById('groupedReportChart').getContext('2d');
+      const groupedChartData = {
+        labels: ['< 5.7', '5.7 ≤ x < 6.5', '6.5 ≤ x < 8.5', '≥ 8.5'],
+        datasets: [{
+          label: '糖化血色素數值分組',
+          data: [groups.A, groups.B, groups.C, groups.D],
+          backgroundColor: [
+            'rgba(54, 162, 235, 0.6)', // A
+            'rgba(255, 206, 86, 0.6)', // B
+            'rgba(75, 192, 192, 0.6)', // C
+            'rgba(255, 99, 132, 0.6)'  // D
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 99, 132, 1)'
+          ],
+          borderWidth: 1
+        }]
+      };
+
+      const groupedChartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              precision:0
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: '糖化血色素數值分組統計'
+          }
+        }
+      };
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: groupedChartData,
+        options: groupedChartOptions
+      });
+    }
+
+    // Render grouped chart for patients under 50 years old
+    function renderUnder50GroupedChart(reports) {
+      const under50Reports = reports.filter(report => report.page < 50); // Filter reports where age < 50
+
+      // Define the groups
+      const groups = {
+        A: 0, // < 5.7
+        B: 0, // 5.7 <= x < 6.5
+        C: 0, // 6.5 <= x < 8.5
+        D: 0  // >= 8.5
+      };
+
+      // Categorize each 09006C value into the groups
+      under50Reports.forEach(report => {
+        const test = report.test.find(test => test.tinsuranceCode === '09006C');
+        if (test) {
+          const value = parseFloat(test.tvalue);
+          if (value < 5.7) {
+            groups.A += 1;
+          } else if (value >= 5.7 && value < 6.5) {
+            groups.B += 1;
+          } else if (value >= 6.5 && value < 8.5) {
+            groups.C += 1;
+          } else if (value >= 8.5) {
+            groups.D += 1;
+          }
+        }
+      });
+
+      const ctx = document.getElementById('under50GroupedChart').getContext('2d');
+      const groupedChartData = {
+        labels: ['< 5.7', '5.7 ≤ x < 6.5', '6.5 ≤ x < 8.5', '≥ 8.5'],
+        datasets: [{
+          label: '50歲以下患者糖化血色素數值分組',
+          data: [groups.A, groups.B, groups.C, groups.D],
+          backgroundColor: [
+            'rgba(54, 162, 235, 0.6)', // A
+            'rgba(255, 206, 86, 0.6)', // B
+            'rgba(75, 192, 192, 0.6)', // C
+            'rgba(255, 99, 132, 0.6)'  // D
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 99, 132, 1)'
+          ],
+          borderWidth: 1
+        }]
+      };
+
+      const groupedChartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              precision:0
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: '50歲以下患者糖化血色素數值分組統計'
+          }
+        }
+      };
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: groupedChartData,
+        options: groupedChartOptions
+      });
+    }
+
+    // Render grouped chart for patients over 50 years old
+    function renderOver50GroupedChart(reports) {
+      const over50Reports = reports.filter(report => report.page >= 50); // Filter reports where age >= 50
+
+      // Define the groups
+      const groups = {
+        A: 0, // < 5.7
+        B: 0, // 5.7 <= x < 6.5
+        C: 0, // 6.5 <= x < 8.5
+        D: 0  // >= 8.5
+      };
+
+      // Categorize each 09006C value into the groups
+      over50Reports.forEach(report => {
+        const test = report.test.find(test => test.tinsuranceCode === '09006C');
+        if (test) {
+          const value = parseFloat(test.tvalue);
+          if (value < 5.7) {
+            groups.A += 1;
+          } else if (value >= 5.7 && value < 6.5) {
+            groups.B += 1;
+          } else if (value >= 6.5 && value < 8.5) {
+            groups.C += 1;
+          } else if (value >= 8.5) {
+            groups.D += 1;
+          }
+        }
+      });
+
+      const ctx = document.getElementById('over50GroupedChart').getContext('2d');
+      const groupedChartData = {
+        labels: ['< 5.7', '5.7 ≤ x < 6.5', '6.5 ≤ x < 8.5', '≥ 8.5'],
+        datasets: [{
+          label: '50歲以上患者糖化血色素數值分組',
+          data: [groups.A, groups.B, groups.C, groups.D],
+          backgroundColor: [
+            'rgba(54, 162, 235, 0.6)', // A
+            'rgba(255, 206, 86, 0.6)', // B
+            'rgba(75, 192, 192, 0.6)', // C
+            'rgba(255, 99, 132, 0.6)'  // D
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(255, 99, 132, 1)'
+          ],
+          borderWidth: 1
+        }]
+      };
+
+      const groupedChartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true,
+            ticks: {
+              precision:0
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          title: {
+            display: true,
+            text: '50歲以上患者糖化血色素數值分組統計'
+          }
+        }
+      };
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: groupedChartData,
+        options: groupedChartOptions
+      });
+    }
+
+    // Generate charts on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const reports = <%- JSON.stringify(reports) %>;
+      renderCharts(reports);
+    });
+  </script>
+
+  <!-- Add canvas elements for the charts -->
+  <div class="fixed-chart">
+    <canvas id="reportChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+  
+  <div class="fixed-chart-grouped">
+    <canvas id="groupedReportChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+
+  <!-- Add canvas for under 50 grouped chart -->
+  <div class="fixed-chart-under50-grouped">
+    <canvas id="under50GroupedChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+
+  <!-- Add canvas for over 50 grouped chart -->
+  <div class="fixed-chart-over50-grouped">
+    <canvas id="over50GroupedChart" style="width: 100%; height: 100%;"></canvas>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>處方更新結果</title>
+</head>
+<body>
+    <% if (errorMessage) { %>
+        <h2 style="color: red;"><%= errorMessage %></h2>
+    <% } else { %>
+        <h1><%= message %></h1>
+        <p>患者 ID: <%= pid %></p>
+    <% } %>
+
+    <a href="/searchPrescriptions?pid=<%= pid %>">返回處方查詢頁面</a>
+</body>
+</html>

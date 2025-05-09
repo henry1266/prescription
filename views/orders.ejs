@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查詢訂單</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    
+    <h1>查詢訂單</h1>
+    <form action="/orders" method="GET">
+        <label for="orderId">訂單ID：</label>
+        <input type="text" id="orderId" name="orderId">
+        <button type="submit">查詢</button>
+    </form>
+    <button type="button" onclick="window.location.href='http://192.168.68.90:3001/orderskeyin'">新增訂單</button>
+    <button type="button" onclick="toggleItems()">顯示/隱藏 Items</button>
+
+    <% if (purchaseOrders.length > 0) { %>
+        <h2>查詢结果</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Bill</th>
+                    <th>Bill Date</th>
+                    <th>Supplier</th>
+                    <th class="items-column">Items</th>
+                    <th>Total Cost</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% purchaseOrders.forEach(order => { %>
+                    <tr>
+                        <td><%= order.poid %></td>
+                        <td><%= order.pobill %></td>
+                        <td><%= order.pobilldate %></td>
+                        <td><%= order.posupplier %></td>
+                        <td class="items-column">
+                            <table border="1">
+                                <thead>
+                                    <tr>
+                                        <th>貨號</th>
+                                        <th>名稱</th>
+                                        <th>數量</th>
+                                        <th>總價格</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% order.items.forEach(item => { %>
+                                        <tr>
+                                            <td><%= item.did %></td>
+                                            <td><%= item.dname %></td>
+                                            <td><%= item.dquantity %></td>
+                                            <td><%= item.dtotalCost %></td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </td>
+                        <td><%= order.totalCost %></td>
+                        <td>
+                            <a href="/orders/edit/<%= order.poid %>">編輯</a>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    <% } else { %>
+        <p>没有找到订单。</p>
+    <% } %>
+
+    <script>
+        function toggleItems() {
+            const itemsColumns = document.querySelectorAll('.items-column');
+            itemsColumns.forEach(column => {
+                column.classList.toggle('hidden');
+            });
+        }
+    </script>
+</body>
+</html>

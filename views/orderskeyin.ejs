@@ -1,0 +1,69 @@
+<!-- filepath: /c:/Users/xinga/OneDrive/NODE/node/app/views/orders.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>進貨單輸入</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<h1>進貨單輸入</h1>
+    <form action="/ordersresult" method="POST">
+        <label for="poid">訂單ID：</label>
+        <input type="text" id="poid" name="poid" required><br>
+
+        <label for="pobill">發票：</label>
+        <input type="text" id="pobill" name="pobill" required><br>
+
+        <label for="pobilldate">發票日期：</label>
+        <input type="date" id="pobilldate" name="pobilldate" required><br>
+
+        <label for="posupplier">廠商：</label>
+        <input type="text" id="posupplier" name="posupplier" required><br>
+
+        <h3>商品</h3>
+        <div id="items">
+            <div class="item">
+                <label for="did">商品ID：</label>
+                <input type="text" id="did" name="items[0][did]" required><br>
+
+                <label for="dname">商品名稱：</label>
+                <input type="text" id="dname" name="items[0][dname]" required><br>
+                
+                <label for="dquantity">數量：</label>
+                <input type="number" id="dquantity" name="items[0][dquantity]" required><br>
+
+                <label for="dtotalCost">總價格：</label>
+                <input type="number" id="dtotalCost" name="items[0][dtotalCost]" required><br>
+            </div>
+        </div>
+        <button type="button" onclick="addItem()">添加另一个商品</button><br><br>
+        <button type="submit">提交</button>
+    </form>
+
+    <script>
+        let itemIndex = 1;
+        function addItem() {
+            const itemsDiv = document.getElementById('items');
+            const newItemDiv = document.createElement('div');
+            newItemDiv.classList.add('item');
+            newItemDiv.innerHTML = `
+                <label for="did">商品ID：</label>
+                <input type="text" id="did" name="items[${itemIndex}][did]" required><br>
+
+                <label for="dname">商品名稱：</label>
+                <input type="text" id="dname" name="items[${itemIndex}][dname]" required><br>
+                
+                <label for="dquantity">數量：</label>
+                <input type="number" id="dquantity" name="items[${itemIndex}][dquantity]" required><br>
+
+                <label for="dtotalCost">總價格：</label>
+                <input type="number" id="dtotalCost" name="items[${itemIndex}][dtotalCost]" required><br>
+            `;
+            itemsDiv.appendChild(newItemDiv);
+            itemIndex++;
+        }
+    </script>
+</body>
+</html>

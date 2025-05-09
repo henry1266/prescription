@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Prescriptions</title>
+    <link rel="stylesheet" href="/css/manageprescription.css">
+
+</head>
+<body>
+     <%- include('sidebar') %>
+    <script>
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = `${year}-${month} 月處方數`;
+
+    // 设置预设值到日期输入框
+	document.getElementById('predate').value = formattedDate;
+	document.getElementById('startdate').value = formattedDate;
+	document.getElementById('enddate').value = formattedDate;
+
+  </script>
+<script>
+
+function updatePrei(id, check) {
+    const element = document.querySelector(`[data-id="${id}"][data-type="${check}"]`);
+
+    let prei = element.dataset.prei;
+    //alert(`: ${prei}`);
+
+    // 更新 prei 的值
+    switch (prei) {
+        case "2":
+            prei = "1";
+            break;
+        case "1":
+            prei = "0";
+            break;
+        case "0":
+            prei = "-1";
+            break;
+        case "-1":
+            prei = "2";
+            break;
+    }
+
+    element.dataset.prei = prei;
+    element.innerHTML = prei === "2" ? "☐" : prei === "1" ? "☑" : prei === "0" ? "☒" : "⏹︎";
+    //alert(`: ${prei}`);
+    // 動態設置表單的值並提交表單
+    // 使用 AJAX 發送請求來更新服務器端的數據
+    fetch(`/manageprescription/update_prei/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `prei=${encodeURIComponent(prei)}&check=${encodeURIComponent(check)}`
+    })
+    .then(response => {
+        if (response.ok) {
+            //alert("Prescription prei updated successfully");
+            location.reload(); // Refresh the page in place
+        } else {
+            //alert("Failed to update prescription prei");
+        }
+    })
+        .catch(error => {
+        console.error('Error:', error);
+        alert("Failed to update prescription prei");
+        });
+    }
+
+function notifyPatient(pline, pname, startdate, enddate, type, precount, prescriptionId, check) {
+        // 轉換 id
+        const convertedId = type === "predate2" ? 2 : type === "predate3" ? 3 : type;
+      const today1 = new Date();
+      const formattedDate1 = today1.toISOString().split('T')[0].replace(/-/g, '');
+      const startdate1 = formattedDate1;
+    
+    const endDateObj = new Date(today);
+      endDateObj.setDate(endDateObj.getDate() + 5);
+      const formattedEndDate = endDateObj.toISOString().split('T')[0].replace(/-/g, '');
+      const enddate1 = formattedEndDate;
+
+    fetch(`/manageprescription/send_message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            pline: pline,
+            panme: pname,
+            startdate: startdate1,
+            enddate: enddate1,
+            id: convertedId,
+            precount: precount,
+            prescriptionId: prescriptionId, // 將 prescriptionId 發送給後端
+            check: check // 傳遞 prei2 或 prei3
+        })
+    
+    })
+    .then(response => response.text())
+    .then(data => {
+        console.log("Server response:", data);
+        //alert(data);
+        location.reload(); // Refresh the page in place
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("通知病人失敗");
+        });
+    }
+
+
+
+</script>
+
+<!-- 隱藏的表單 -->
+<form id="updatePreiForm" method="POST" style="display: none;">
+    <input type="hidden" name="prei" value="">
+    <input type="hidden" name="check" value="">
+</form>
+
+
+    <h1 style="text-align: center;">竹文慢箋管理系統</h1>
+
+    <!-- 第一张表格：value 小于等于今天的记录 -->
+    <h2 style="text-align: center;">到期</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>通知</th>
+                <th>按鈕</th>
+                <th>次數</th>
+                <th>日期</th>
+                <th>姓名</th>
+                <th>Line</th>
+                <th>Phone</th>
+                <th>身分證</th>
+                <th>天數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% prescriptions.beforeToday.forEach(prescription => { %>
+                <tr>
+            <td class="<% if (prescription.prei === '2') { %>green-bg<% } else if (prescription.prei === '1') { %>yellow-bg<% } else if (prescription.prei === '0') { %>red-bg<% } else if (prescription.prei === '-1') { %>gray-bg<% } %>">
+                <span data-id="<%= prescription.id %>" data-type="<%= prescription.check %>" data-prei="<%= prescription.prei %>" onclick="updatePrei('<%= prescription.id %>', '<%= prescription.check %>')" >
+                    <% if (prescription.prei === "2") { %>
+                    ☐
+                    <% } else if (prescription.prei === "1") { %>
+                    ☑
+                    <% } else if (prescription.prei === "0") { %>
+                    ☒
+                    <% } else if (prescription.prei === "-1") { %>
+                    ⏹︎
+                    <% } %>
+                </span>
+            </td>
+             <td>
+                <% if (prescription.prei === '1') { %>
+                    <button onclick="notifyPatient('<%= prescription.pline %>', '<%= prescription.pname %>', '<%= prescription.startdate %>', '<%= prescription.enddate %>', '<%= prescription.type %>', '<%= prescription.precount %>', '<%= prescription.id %>', '<%= prescription.check %>')">通知</button>
+                <% } %>
+            </td>
+                    <td class="<%= prescription.type === 'predate2' ? 'type-predate2' : prescription.type === 'predate3' ? 'type-predate3' : '' %>">
+                        <%= prescription.type === 'predate2' ? 2 : prescription.type === 'predate3' ? 3 : prescription.type %>
+                    </td>
+                    <td><%= prescription.value %></td>
+                    <td><%= prescription.pname %></td>
+                    <td><%= prescription.pline %></td>
+                    <td><%= prescription.pphone %></td>
+                    <td>
+                        <a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank">
+                            <%= prescription.pid %>
+                        </a>
+                    </td>
+                    <td><%= prescription.preday %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <!-- 第二张表格：value 大于今天的记录 -->
+    <h2 style="text-align: center;">未到</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>通知</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Patient Name</th>
+                <th>Line</th>
+                <th>Phone</th>
+                <th>PID</th>
+                <th>天數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% prescriptions.afterToday.forEach(prescription => { %>
+                <tr>
+            <td class="<% if (prescription.prei === '2') { %>green-bg<% } else if (prescription.prei === '1') { %>yellow-bg<% } else if (prescription.prei === '0') { %>red-bg<% } else if (prescription.prei === '-1') { %>gray-bg<% } %>">
+                <span data-id="<%= prescription.id %>" data-type="<%= prescription.check %>" data-prei="<%= prescription.prei %>" onclick="updatePrei('<%= prescription.id %>', '<%= prescription.check %>')">
+                    <% if (prescription.prei === "2") { %>
+                    ☐
+                    <% } else if (prescription.prei === "1") { %>
+                    ☑
+                    <% } else if (prescription.prei === "0") { %>
+                    ☒
+                    <% } else if (prescription.prei === "-1") { %>
+                    ⏹︎
+                    <% } %>
+                </span>
+            </td>
+                    <td class="<%= prescription.type === 'predate2' ? 'type-predate2' : prescription.type === 'predate3' ? 'type-predate3' : '' %>">
+                        <%= prescription.type === 'predate2' ? 2 : prescription.type === 'predate3' ? 3 : prescription.type %>
+                    </td>
+                    <td><%= prescription.value %></td>
+                    <td><%= prescription.pname %></td>
+                    <td><%= prescription.pline %></td>
+                    <td><%= prescription.pphone %></td>
+                    <td>
+                        <a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank">
+                            <%= prescription.pid %>
+                        </a>
+                    </td>
+                    <td><%= prescription.preday %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+
+
+
+</body>
+</html>

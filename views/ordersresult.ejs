@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Order Result</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <h1>Purchase Order Result</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Bill</th>
+                <th>Bill Date</th>
+                <th>Supplier</th>
+                <th>Items</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><%= order.poid %></td>
+                <td><%= order.pobill %></td>
+                <td><%= order.pobilldate %></td>
+                <td><%= order.posupplier %></td>
+                <td>
+                    <ul>
+                        <% order.items.forEach(item => { %>
+                            <li>
+                                <p>Item ID: <%= item.did %></p>
+                                <p>Quantity: <%= item.dquantity %></p>
+                                <p>Total Cost: <%= item.dtotalCost %></p>
+                            </li>
+                        <% }); %>
+                    </ul>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

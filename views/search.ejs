@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>首頁</title>
+  <%- include('js') %>
+</head>
+<body>
+
+   <%- include('sidebar') %>
+   
+   <!-- 主內容區域 -->
+  <div class="content">
+    <h2>選擇日期區間計算處方成本</h2>
+    <form action="/calculate" method="POST">
+    <label for="startdate">開始日期：</label>
+    <input type="date" id="startdate" name="startdate" required>
+
+    <label for="enddate">結束日期：</label>
+    <input type="date" id="enddate" name="enddate" required>
+
+    <button type="submit">計算成本</button>
+    </form>
+	  <h2>來客時間分布</h2>
+    <form action="/customer-time-chart" method="POST">
+    <label for="predate">选择日期：</label>
+    <input type="date" id="predate" name="predate" required>
+    <button type="submit">查看來客時間圖表</button>
+</form>
+<script>
+    // 获取当前日期
+    //const today = new Date();
+    // 获取当前日期
+    //const today = new Date();
+    //const year = today.getFullYear();
+    //const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，+1，并保证是两位数
+    //const day = String(today.getDate()).padStart(2, '0'); // 保证是两位数
+
+    // 動態生成 URL
+    //const baseUrl = "http://192.168.68.90:3001/calendar";
+    //const dynamicUrl = `${baseUrl}/${year}/${month}`;
+</script> 
+<script>
+
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = ` ${year}-${month} 月處方數`;
+    
+    
+    // 将当前日期设置为预设日期格式 YYYY-MM-DD
+    //const formattedDate = `${year}-${month}-${day}`;
+
+    // 设置预设值到日期输入框
+	document.getElementById('predate').value = formattedDate;
+	document.getElementById('startdate').value = formattedDate;
+	document.getElementById('enddate').value = formattedDate;
+
+  
+  </script>
+  <h1>查詢藥品健保碼</h1>
+  
+  <!-- 表单让用户输入药品健保码 -->
+  <form action="/searchByInsuranceCode" method="POST">
+    <label for="dinsuranceCode">藥品健保碼:</label>
+    <input type="text" id="dinsuranceCode" name="dinsuranceCode" required>
+    <button type="submit">查詢</button>
+  </form>
+
+
+ <h2>選擇日期區間計算處方成本</h2>
+<form action="/searchByDate" method="POST">
+  <label for="startdate">開始日期：</label>
+  <input type="date" id="startdate" name="startdate" required>
+  <label for="enddate">結束日期：</label>
+  <input type="date" id="enddate" name="enddate" required>
+
+  <button type="submit">計算成本</button>
+</form>
+	
+<form action="/customerTimeChart" method="get">
+  <label for="predate">選擇日期:</label>
+  <input type="date" id="predate" name="predate" required>
+  <button type="submit">提交</button>
+</form>
+
+
+
+  <h1>根据患者ID查询处方</h1>
+  <form action="/searchPrescriptions" method="GET">
+    <label for="pid">患者ID：</label>
+    <input type="text" id="pid" name="pid" required>
+    <button type="submit">查询</button>
+  </form>
+
+
+
+
+</body>
+</html>

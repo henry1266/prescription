@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHTMLX Gantt Chart Test</title>
+    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+    <style>
+    #gantt_here {
+        width: 100%;
+        height: 800px;
+    }
+    /* 隱藏時間軸的文字 */
+    .gantt_scale_line span {
+        visibility: hidden;
+    }
+    /* 隱藏時間軸的日期格線 */
+    .gantt_task_scale .gantt_scale_cell,
+    .gantt_task_scale .gantt_scale_row {
+        border: none;
+        background: none;
+    }
+    .gantt_task_cell {
+        border: none !important; /* 移除日期格線 */
+    }
+    .gantt_grid_head_cell {
+        text-align: center !important; /* 表頭文字靠中對齊 */
+        cursor: pointer;
+        background-color: #f0f0f0; /* 基礎灰色 */
+        padding: 1px; /* 增加一點內距，讓標題更舒適 */
+        border-radius: 4px; /* 稍微圓角 */
+ 
+        transition: background-color 0.3s ease; /* 平滑過渡 */
+    }
+    .gantt_grid_head_cell:hover {
+        background-color: #e0e0e0; /* 懸停時略深 */
+    }
+    .gantt_grid_head_cell.active {
+        background-color: #5C9EAD; /* 啟動時淺藍綠 */
+        color: white;
+        border: 1px solid #487C8A; /* 略深的邊框色，增加層次感 */
+    }
+    .progress-bar {
+        width: 100%;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        height: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 5px;
+        transition: width 0.3s ease-in-out;
+    }
+    .button-container {
+        position: absolute;
+        top: 2rem;
+        right: 35rem;
+        z-index: 1000;
+    }
+    .link-button {
+        background-color: #5C9EAD; /* 與啟動狀態一致 */
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    .link-button:hover {
+        background-color: #487C8A; /* 懸停時略深 */
+    }
+    /* 新增表格標題樣式 */
+        .gantt-grid-title {
+            background-color: #5C9EAD; /* 與啟動狀態一致 */
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 2px solid #487C8A; /* 底部邊框增加層次感 */
+            margin-bottom: 0; /* 緊貼表格 */
+        }
+</style>
+
+</head>
+<body>
+<!-- 排序按鈕 -->
+
+<script>
+function updateNotification(id, value) {
+
+    // 使用 AJAX 發送請求來更新服務器端的數據
+    fetch(`/gantt/update_prei/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `value=${encodeURIComponent(value)}`
+    })
+    .then(response => {
+        if (response.ok) {
+            //alert("Notification updated successfully");
+        } else {
+            alert("Failed to update notification");
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Failed to update notification");
+    });
+}
+    
+function visitPatient(pid) {
+    // 使用 AJAX 發送請求來查詢病人的 pline
+    fetch(`/gantt/getPatientPline?pid=${pid}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`病人身份證字號: ${pid}\n病人 Line: ${data.pline}`);
+        } else {
+            alert(`未找到病人身份證字號: ${pid}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("查詢病人 Line 失敗");
+    });
+}    
+function sendNotification(pid, panme, enddate, prescriptionId) {
+    const formattedEnddate = new Date(enddate).toISOString().split('T')[0].replace(/-/g, '');
+    console.log('Sending notification with:', { pid, panme, formattedEnddate, prescriptionId }); // 調試用
+
+    fetch('/gantt/send_endmessage', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            plineField1: pid, // 確認這是否需要轉換為 LINE ID
+            panme1: panme,
+            enddate1: formattedEnddate,
+            prescriptionId: prescriptionId, // 將 prescriptionId 發送給後端
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(data => {
+        console.log('Response from server:', data); // 調試用
+        if (data.includes("推送訊息成功")) {
+            alert(`已已已成功通知 ${panme} 回診日期 ${formattedEnddate}`);
+            // Update the task in the Gantt chart
+            const task = gantt.getTaskByIndex(gantt.getTaskBy("pid", pid)[0].id - 1); // Find task by pid
+            if (task) {
+                task.notification = "0"; // Update prei0 to "0"
+                gantt.refreshTask(task.id); // Refresh the specific task to update the UI
+            }
+        
+        
+        } else {
+            alert(`通知發送失敗，請檢查伺服器回應：${data}`);
+        }
+    })
+    
+    
+    
+    
+    .catch(error => {
+        console.error('Error:', error);
+        alert(`通知發送失敗：${error.message}`);
+    });
+}
+
+  
+    // 將 id="notification-3" 的行底色設置為灰色
+    document.getElementById('notification-3').parentElement.style.backgroundColor = 'gray';
+</script>
+    <h2>慢性處方箋進度管理</h2>
+    <h3>總筆數: <%= nonZeroAndNotEmptyPremCount %>   留單: <%= premCount %></h3>
+    
+     <a href="http://192.168.68.90:3001/filter" target="_blank">簡易版</a>
+    
+     <div class="button-container">
+    <button id="toggleGrid" class="link-button">隱藏/顯示甘特圖</button>
+    </div>
+
+    <div id="gantt_here"></div>
+    <script>
+        // 配置 Gantt 的列
+    gantt.config.columns = [
+        { name: "name", label: "姓名", tree: true, width: 95 }, // 姓名列，作为树形结构主列
+        { // 新增的處方 ID 列
+        name: "pid", 
+        label: "處方 ID", 
+        align: "center", 
+        width: 110,
+        template: function(task) {
+            return `<a href="http://192.168.68.90:3001/searchPrescriptions?pid=${task.pid}" target="_blank">${task.pid}</a>`;
+        }
+        },
+
+                { 
+            name: "prem", 
+            label: "留單", 
+            align: "center", 
+            width: 33, 
+            template: function(task) {
+                const cssClass = task.prem < 0 ? 'negative-prem' : 'positive-prem';
+                return `<span class="${cssClass}">${task.prem}</span>`;
+            }
+        },
+        { name: "precount", label: "次數", align: "center", width: 33 }, // 新增 Precount 列
+        { name: "preday", label: "天數", align: "center", width: 33 }, // 新增 Preday 列
+        { name: "start_date", label: "看診日", align: "center", width: 96 }, // 開始日期
+        { name: "end_date", label: "回診日", align: "center", width: 96 }, // 結束日期
+       { 
+            name: "remainingDays", 
+            label: "剩餘天數", 
+            align: "center", 
+            width: 85, 
+            template: function(task) {
+                return task.remainingDays !== null ? task.remainingDays : "N/A";
+            }
+        },
+{ 
+    name: "notification", 
+    label: "回診通知", 
+    align: "center", 
+    width: 85, 
+    template: function(task) {
+        // 根據 notification (prei0) 的值顯示不同符號
+        const checked = task.notification === "0" ? "checked" : "";
+        return `<input type="checkbox" ${checked} onclick="updateNotification('${task._id}', this.checked)">`;
+    }
+},
+{
+    name: "visit",
+    label: "回診",
+    align: "center",
+    width: 65,
+    template: function(task) {
+        // Check if remainingDays < 5, pline is non-empty, and notification (prei0) is "1"
+        if (task.remainingDays < 5 && task.pline && task.pline.trim() !== "" && task.notification === "1") {
+            return `<button onclick="sendNotification('${task.pid}', '${task.name}', '${task.end_date}', '${task._id}')">通知</button>`;
+        }
+        return ""; // Return empty string if any condition fails
+    }
+},
+{ 
+    name: "progress-bar", 
+    label: "進度", 
+    align: "center", 
+    width: 80, 
+    template: function(task) {
+        const progressPercent = Math.min(task.progress * 100, 100);
+        let barColor;
+
+        // 设置颜色规则
+        if (task.remainingDays > 65) {
+            barColor = 'green'; // 绿色
+        } else if (task.remainingDays <= 65 && task.remainingDays > 38) {
+            barColor = 'yellow'; // 黄色
+        } else if (task.remainingDays <= 38 && task.remainingDays > 4) {
+            barColor = 'orange'; // 橙色
+        } else {
+            barColor = 'red'; // 红色
+        }
+
+        return `
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${progressPercent}%; background-color: ${barColor};">
+                </div>
+            </div>
+        `;
+    }
+}
+        
+    ];
+   
+        
+        const style = document.createElement("style");
+    style.textContent = `
+        .negative-prem {
+            background-color: red;
+            color: white;
+            font-weight: bold;
+        }
+        .positive-prem {
+
+        }
+    `;
+    const sortBy = "<%= sortBy %>";
+    document.head.appendChild(style);
+        // 從後端傳入數據
+        const prescriptions = <%- JSON.stringify(nonZeroAndNotEmptyPrem) %>;
+
+        // 設定 Gantt 日期格式
+        gantt.config.date_format = "%Y-%m-%d";
+        gantt.config.min_column_width = 5; // 日期欄位寬度
+
+        // 設置行高與條形高度
+        gantt.config.row_height = 29; // 行高（默認 40px）
+        gantt.config.bar_height = 19; // 條形圖高度（默認行高的 70%）
+
+        // 自定義進度條文字顯示 name 和 id
+        gantt.templates.task_text = function (start, end, task) {
+            return `${task.name} `; // 顯示姓名和 ID
+        };
+
+        // 自定義 tooltip 顯示完整信息
+        gantt.templates.tooltip_text = function (start, end, task) {
+            return `
+                <b>Name:</b> ${task.name}<br/>
+                <b>ID:</b> ${task.pid}<br/>
+                <b>Prem:</b> ${task.prem}
+                <b>Start Date:</b> ${task.start_date}<br/>
+                <b>End Date:</b> ${task.end_date}
+                <b>Precount:</b> ${task.precount}
+                <b>Preday:</b> ${task.preday}
+            `;
+        };
+      
+        // 將數據轉換為 Gantt 格式
+        const today = new Date();
+        const tasks = {
+            data: prescriptions.map((prescription, index) => {
+                const startDate = new Date(prescription.formattedPredate);
+                const endDate = new Date(prescription.calculatedDate);
+
+                const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24); // 總天數
+                const elapsedDays = (today - startDate) / (1000 * 60 * 60 * 24); // 已過天數
+                const remainingDays = Math.max(0, Math.floor(totalDays - elapsedDays)); // 剩余天数（取整）
+                const progress = Math.max(0, Math.min(1, elapsedDays / totalDays)); // 計算進度
+
+                return {
+                    _id:prescription._id, 
+                    id: index + 1,
+                    name: prescription.pname, // 僅包含姓名
+                    pid: prescription.pid,    // ID
+                    prem: prescription.prem,  // Prem 值
+                    precount: prescription.precount, // Precount 值
+                    preday: prescription.preday, // Preday 值
+                    text: prescription.pname, // 任務名稱只顯示姓名
+                    start_date: prescription.formattedPredate,
+                    end_date: prescription.calculatedDate,
+                    progress: progress,
+                    remainingDays : remainingDays,
+                    notification: prescription.prei0,
+                    pline: prescription.pline
+ 
+                };
+            })
+        };
+
+        // 初始化甘特圖
+        gantt.init("gantt_here");
+
+        // 加載數據
+        gantt.parse(tasks);
+    
+    // 手動綁定欄位標題點擊事件
+    document.addEventListener("DOMContentLoaded", () => {
+         // 「剩餘天數」標題
+        const remainingDaysHeader = document.querySelector('.gantt_grid_head_cell[data-column-name="remainingDays"]');
+        if (remainingDaysHeader) {
+            remainingDaysHeader.style.cursor = "pointer";
+            remainingDaysHeader.addEventListener("click", () => {
+                window.location.href = "/gantt?sort=remainingDays";
+            });
+            if (sortBy === "remainingDays") {
+                remainingDaysHeader.classList.add("active");
+                remainingDaysHeader.innerHTML = "剩餘天數 ▼";
+            } else {
+                remainingDaysHeader.innerHTML = "剩餘天數 ↕";
+            }
+            console.log("Remaining Days Header set to:", remainingDaysHeader.innerHTML); // 調試用
+        } else {
+            console.error("無法找到 'remainingDays' 欄位標題元素");
+        }
+
+// 「看診日」標題
+        const startDateHeader = document.querySelector('.gantt_grid_head_cell[data-column-name="start_date"]');
+        if (startDateHeader) {
+            startDateHeader.style.cursor = "pointer";
+            startDateHeader.addEventListener("click", () => {
+                window.location.href = "/gantt?sort=predate";
+            });
+            if (sortBy === "predate") {
+                startDateHeader.classList.add("active");
+                startDateHeader.innerHTML = "看診日 ▼";
+            } else {
+                startDateHeader.innerHTML = "看診日 ↕";
+            }
+        } else {
+            console.error("無法找到 'start_date' 欄位標題元素");
+        }
+    
+    });
+
+    // 控制隱藏/顯示 class="gantt_grid"
+        let isGridHidden = false;
+        document.getElementById("toggleGrid").addEventListener("click", () => {
+            const gridElement = document.querySelector(".gantt_task");
+            //const gridElement = document.querySelector(".gantt_layout_content");
+            if (gridElement) {
+                if (isGridHidden) {
+                    gridElement.style.display = "block"; // 顯示
+                    //document.querySelector(".gantt_layout_cell.grid_cell.gantt_layout_outer_scroll.gantt_layout_outer_scroll_vertical.gantt_layout_outer_scroll_horizontal.gantt_layout_cell_border_right").style.display = "block";
+                } else {
+                    gridElement.style.display = "none"; // 隱藏
+                    //document.querySelector("gantt_data_area").style.display = "block";
+                    //document.querySelector(".gantt_layout_cell.grid_cell.gantt_layout_outer_scroll.gantt_layout_outer_scroll_vertical.gantt_layout_outer_scroll_horizontal.gantt_layout_cell_border_right").style.display = "none";
+                }
+                isGridHidden = !isGridHidden;
+            }
+        });
+
+    
+    
+    
+    
+    
+    </script>
+</body>
+</html>

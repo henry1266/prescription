@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>藥品查詢結果</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <h1>藥品查詢結果</h1>
+
+  <!-- 如果有錯誤訊息，顯示錯誤訊息 -->
+  <% if (errorMessage) { %>
+    <h2 style="color: red;"><%= errorMessage %></h2>
+  <% } else if (medication) { %>
+    <!-- 顯示查詢結果 -->
+    <h2>查詢結果: 藥品健保碼 <%= insuranceCode %></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>健保碼</th>
+          <th>藥品名稱</th>
+          <th>單價 (dcost)</th>
+          <th>總數量 (dcount)</th>
+          <th>總成本 (dcost * dcount)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><%= medication.dinsuranceCode %></td>
+          <td><%= medication.dname %></td>
+          <td><%= medication.dcost.toFixed(2) %></td>
+          <td><%= totalQuantity %></td>
+          <td><%= totalCost.toFixed(2) %></td>
+        </tr>
+      </tbody>
+    </table>
+  <% } %>
+
+  <a href="/">返回主頁</a>
+</body>
+</html>

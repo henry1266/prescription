@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>處方數儀表板</title>
+    <%- include('js') %>
+    
+    <style>
+        /* 自定義樣式 */
+        body {
+            padding-top: 56px;
+            background-color: #1a1a2e; /* 深色背景 */
+            color: #ffffff; /* 字體顏色 */
+            font-family: 'Roboto', sans-serif;
+        }
+        .chart-container1 {
+            width: 24rem; /* 調整圖表容器寬度 */
+            margin-top: 1rem;
+            margin-right: 1rem;
+            color: 'white';
+        }
+        .chart-container2{
+            width: 24rem; /* 調整圖表容器寬度 */
+            margin-top: 1rem;
+            margin-right: 1rem;
+            color: 'white', // 圖表標題文字顏色
+        }
+        .charts-wrapper {
+            position: absolute; /* 使用絕對定位 */
+            top: 15rem;
+            right: 3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 保持圖表左對齊 */
+        }
+        .sidebar {
+            background-color: #f8f9fa;
+            height: 100vh;
+            position: fixed;
+        }
+        .fixed-chart {
+      position: fixed;
+      top: 5rem; /* 距離頁面頂部 10px */
+      right: 3rem;
+      width: 24rem; /* 圖表寬度 */
+      height: 15rem; /* 圖表高度 */
+    }
+    </style>
+    <style>
+    /* 美化日曆表格 */
+    .calendar {
+        width: 90%;
+        max-width: 35rem;
+        margin: 9px auto;
+        border-collapse: collapse;
+        text-align: center;
+        background-color: rgba(255, 255, 255, 0.0);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        left: 1rem;
+        top: 2rem;
+    }
+
+    /* 表格標題行 */
+    th {
+        background-color: rgba(75, 192, 192, 0.5);
+        color: #fff;
+        font-weight: bold;
+        padding: 9px;
+    }
+
+    /* 空白單元格樣式 */
+    .empty {
+        background-color: rgba(255, 255, 255, 0.3);
+        border: 1px solid #ddd;
+    }
+
+    
+    /* 值文字樣式 */
+    .count {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .count:hover {
+        color: rgba(75, 192, 192, 1);
+        font-size: 1.1rem;
+    }
+
+    /* 偶數行背景顏色 */
+    tr:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* 表格邊框樣式 */
+    th, td {
+        border: 1px solid #ddd;
+    }
+
+    
+    /* 單元格樣式 */
+    .day-cell {
+        padding: 7px;
+        border: 1px solid #ddd;
+        vertical-align: top;
+        transition: background-color 0.3s ease;
+    }
+    .day-cell:hover {
+    background-color: #f1f8e9; /* 浅绿色背景 */
+    }
+    .day-cell:hover,
+    .day-cell:hover .day,
+    .day-cell:hover .count {
+        color: #000000; /* 包括子元素在悬停时的字体颜色 */
+    }
+
+    /* 日期文字樣式 */
+    .day {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* 凸顯今天的單元格樣式 */
+    .day-cell.today {
+        background-color: rgba(75, 192, 192, 0.7); /* 金黃色背景 */
+        border: 2px solid #FFA500; /* 橙色邊框 */
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+    <%- include('sidebar') %>
+    <script>
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = `${year}-${month} 月處方數`;
+
+    // 设置预设值到日期输入框
+	document.getElementById('predate').value = formattedDate;
+	document.getElementById('startdate').value = formattedDate;
+	document.getElementById('enddate').value = formattedDate;
+
+
+  </script>
+    <!-- 導航欄 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <a class="navbar-brand" href="#">處方數儀表板</a>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            
+            <!-- 主內容區域 -->
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+
+                <!-- 縮小並移動到右上角的圖表 -->
+                <div class="charts-wrapper">
+                    <div class="chart-container1">
+                        <canvas id="weeklySumChart"></canvas>
+                    </div>
+                    <div class="chart-container2">
+                        
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- 主內容可以添加更多的圖表或數據展示 -->
+
+                </div>
+            </main>
+        </div>
+    </div>
+ 
+
+<!-- 通知窗格 -->
+    <div style="width: 15rem; display: flex; flex-direction: column; gap: 15px;margin-left: 15rem;margin-top: 3rem;">
+        <!-- 領藥通知 -->
+        <div style="background-color: rgba(75, 192, 192, 0.5); border-radius: 8px; padding: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+            <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 10px 0; text-align: center;">領藥通知</h3>
+            <ul style="list-style: none; padding: 0; margin: 0; color: rgba(255, 255, 255, 0.8);">
+                <li style="padding: 5px 0;">張三 - 2025-02-25  - 通知</li>
+                <li style="padding: 5px 0;">李四 - 2025-02-26  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+            </ul>
+        </div>
+        <!-- 回診通知 -->
+        <div style="background-color: rgba(75, 192, 192, 0.5); border-radius: 8px; padding: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+            <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 10px 0; text-align: center;">回診通知</h3>
+            <ul style="list-style: none; padding: 0; margin: 0; color: rgba(255, 255, 255, 0.8);">
+                <li style="padding: 5px 0;">陳六 - 2025-02-24  - 通知</li>
+                <li style="padding: 5px 0;">趙七 - 2025-02-27  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+                <li style="padding: 5px 0;">王五 - 2025-02-28  - 通知</li>
+            </ul>
+        </div>
+    </div>
+
+
+
+<div style="max-width: 40rem; margin: 0 auto; position: relative; top: -30rem;">
+    <!-- 顯示 YYYY-MM 和月總數 -->
+    <div style="text-align: center; margin-bottom: 10px; color: #ffffff; font-size: 1.2rem; font-weight: bold;">
+        <% 
+        const yearMonth = moment(datesInMonth[0].date, 'YYYYMMDD').format('YYYY-MM');
+        const monthlyTotal = datesInMonth.reduce((sum, day) => sum + (day.value || 0), 0);
+        %>
+        <span><%= yearMonth %> 月處方數</span>
+    </div>
+
+    <table class="calendar" style="flex-shrink: 0; width: 100%;">
+        <thead>
+            <tr>
+                <th>日</th><th>一</th><th>二</th><th>三</th><th>四</th><th>五</th><th>六</th>
+                <th style="background-color: rgba(75, 192, 192, 0.7); padding: 6px;">週加總</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% 
+            let currentDay = 1;
+            const today = moment().format('YYYYMMDD');
+            const daysInMonth = moment(datesInMonth[0].date, 'YYYYMMDD').daysInMonth();
+            const firstDayOfWeek = moment(datesInMonth[0].date, 'YYYYMMDD').startOf('month').day();
+            let weeklyTotals = []; // 儲存每週總和
+            let weekSum = 0; // 當前週的總和
+
+            for (let week = 0; currentDay <= daysInMonth; week++) { 
+            %>
+                <tr>
+                    <% 
+                    for (let day = 0; day < 7; day++) {
+                        const date = moment(datesInMonth[0].date, 'YYYYMMDD').startOf('month').add(currentDay - 1, 'days');
+                        const prescription = datesInMonth.find(d => d.date === date.format('YYYYMMDD'));
+
+                        if (week === 0 && day < firstDayOfWeek) { 
+                    %>
+                            <td class="empty"></td>
+                    <% 
+                        } else if (currentDay > daysInMonth) { 
+                    %>
+                            <td class="empty"></td>
+                    <% 
+                        } else { 
+                            const prescriptionCount = prescription ? prescription.value : 0;
+                            const isToday = date.format('YYYYMMDD') === today;
+                            weekSum += prescriptionCount; // 累加當週總和
+                    %>
+                            <td class="day-cell <%= isToday ? 'today' : '' %>">
+                                <div class="day"><%= currentDay %></div>
+                                <div class="count"><%= prescriptionCount %> 張</div>
+                            </td>
+                    <% 
+                            currentDay++;
+                        } 
+                    } 
+                    weeklyTotals.push(weekSum); // 儲存當週總和
+                    %>
+                    <!-- 將週加總作為第七欄 -->
+                    <td style="background-color: rgba(75, 192, 192, 0.5); vertical-align: middle; text-align: center;">
+                        <div class="count"><%= weekSum %> 張</div>
+                    </td>
+                    <% 
+                    weekSum = 0; // 重置當週總和
+                    %>
+                </tr>
+            <% } %>
+        </tbody>
+        <!-- 月總數顯示在表格底部 -->
+        <tfoot>
+            <tr>
+                <td colspan="7" style="text-align: right; padding: 8px; color: rgba(255, 255, 255, 0.8); font-weight: bold;"></td>
+                <td style="background-color: rgba(75, 192, 192, 0.5); text-align: center; padding: 6px;">
+                    <div class="count"><%= monthlyTotal %> 張</div>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="fixed-chart" >
+    <canvas id="timeChart" style="width: 100%; height: 100%;"></canvas>
+   
+    <script>
+        // 週總和數據
+        const weeklySums = <%= JSON.stringify(weeklySums) %>;
+
+        // 生成 X 軸標籤
+        const weeklyLabels = weeklySums.map((_, index) => `第 ${index + 1} 週`);
+
+        // 繪製週總和折線圖
+        const weeklyCtx = document.getElementById('weeklySumChart').getContext('2d');
+        new Chart(weeklyCtx, {
+            type: 'line',
+            data: {
+                labels: weeklyLabels,
+                datasets: [{
+                    label: '每週總和',
+                    data: weeklySums,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true
+                }]
+            },
+            options: {
+                maintainAspectRatio: false, // 禁用默認的長寬比
+                aspectRatio: 1.2, // 設置長寬比（寬/高，例如 2:1）
+                color: 'white',
+                responsive: true,
+                 scales: {
+                    x: {
+                        title: { 
+                            display: true, 
+                            text: '週數',
+                            color: 'white' // X 軸標題文字顏色
+                        },
+                        grid: {
+                            color: 'rgba(200, 200, 200, 0.2)' // X 軸網格線淺灰色
+                        },
+                        ticks: {
+                            color: 'white' // X 軸刻度文字顏色
+                        }
+                    },
+                    y: {
+                        title: { 
+                            display: true, 
+                            text: '總和',
+                            color: 'white' // Y 軸標題文字顏色
+                        },
+                        beginAtZero: true,
+                        grid: {
+                        color: 'rgba(200, 200, 200, 0.2)' // Y 軸網格線淺灰色
+                        },
+                        ticks: {
+                            color: 'white' // Y 軸刻度文字顏色
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white' // 圖例文字顏色
+                        }
+                    },
+                title: {
+                    display: true,
+                    text: '每週數據總和',
+                    color: 'white' // 圖表標題顏色
+                }
+        }
+    }
+});
+
+
+        // 定義數據容器
+        const dailyLabels = []; // 日期標籤
+        const weekdayData = []; // 禮拜一、二、四、五
+        const wedSatData = []; // 禮拜三、六
+
+        <% for (let i = 4; i < datesInWeeks.length; i++) { %>
+            <% datesInWeeks[i].forEach(function(day) { %>
+                <% if (day.value > 0) { %>
+                    dailyLabels.push('<%= day.date %>');
+                    var dayOfWeek = new Date('<%= day.date %>').getDay();
+                    if (dayOfWeek === 3 || dayOfWeek === 6) {
+                        wedSatData.push(<%= day.value %>);
+                        weekdayData.push(null);
+                    } else if ([1, 2, 4, 5].includes(dayOfWeek)) {
+                        weekdayData.push(<%= day.value %>);
+                        wedSatData.push(null);
+                    } else {
+                        wedSatData.push(null);
+                        weekdayData.push(null);
+                    }
+                <% } %>
+            <% }) %>
+        <% } %>
+
+        // 繪製每日數據折線圖
+        const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: dailyLabels,
+                datasets: [
+                    {
+                        label: '三、六',
+                        data: wedSatData,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: true,
+                        spanGaps: true
+                    },
+                    {
+                        label: '一、二、四、五',
+                        data: weekdayData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false, // 禁用默認的長寬比
+                aspectRatio: 1.2, // 設置長寬比（寬/高，例如 2:1）
+                responsive: true,
+                plugins: {
+        legend: {
+            labels: {
+                color: 'white' // 圖例文字顏色
+            }
+        },
+        title: {
+            display: true,
+            text: '每日處方總和',
+            color: 'white' // 圖表標題文字顏色
+        }
+    },
+                scales: {
+                    x: {
+                        title: { display: true, text: '日期',
+              color: 'white', }
+                    },
+                    y: {
+                title: { 
+                    display: true, 
+                    text: '每日數量',
+                    color: 'white' // Y 軸標題文字顏色
+                },
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(200, 200, 200, 0.2)' // Y 軸網格線淺灰色
+                },
+                ticks: {
+                    color: 'white' // Y 軸刻度文字顏色
+                }
+                }
+                }
+            }
+        });
+        
+// 將時間數據轉換為小時進行計數
+const times = <%- JSON.stringify(times) %>;
+const hoursCount = new Array(24).fill(0);
+
+times.forEach(time => {
+  const [hour] = time.split(':').map(Number); // 提取小時部分
+  hoursCount[hour]++;
+});
+
+const ctx = document.getElementById('timeChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+    datasets: [{
+      label: '來客數量',
+      data: hoursCount,
+      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      borderWidth: 1
+    }]
+  },
+  options: {
+    color: 'white',
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: '來客數量',
+          color: 'white',
+        },
+        grid: {
+          color: 'rgba(200, 200, 200, 0.2)' // 設置 Y 軸線條為淺灰色
+        },
+        ticks: {
+          color: 'white' // Y 軸文字顏色
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: '小時',
+          color: 'white',
+        },
+        grid: {
+          color: 'rgba(200, 200, 200, 0.2)' // 設置 X 軸線條為淺灰色
+        },
+        ticks: {
+          color: 'white' // X 軸文字顏色
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: 'white' // 圖例文字顏色
+        }
+      },
+      title: {
+        display: true,
+        text: '每小時來客數量分佈',
+        color: 'white'
+      }
+    }
+  }
+});
+     
+    </script>
+</body>
+</html>

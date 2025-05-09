@@ -1,0 +1,87 @@
+<style>
+    /* 設置左側常駐連結區域樣式 */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      width: 170px;
+      height: 100%;
+      background-color: #f4f4f4;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 18px;
+      margin-top: 0;
+    }
+
+    .sidebar ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .sidebar ul li {
+      margin: 10px 0;
+    }
+
+    .sidebar ul li a {
+      text-decoration: none;
+      color: #333;
+      font-weight: bold;
+    }
+
+    .sidebar ul li a:hover {
+      text-decoration: underline;
+      color: #007BFF;
+    }
+
+    /* 設置主內容區域樣式 */
+    .content {
+      margin-left: 220px;
+      padding: 20px;
+    }
+    .no-link {
+    color: gray; /* 設置字體顏色為灰色 */
+    cursor: default; /* 設置鼠標指針為默認樣式 */
+    text-decoration: none; /* 移除下劃線 */
+    }
+</style>
+<script>
+    // 获取当前日期
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，+1，并保证是两位数
+    const day = String(today.getDate()).padStart(2, '0'); // 保证是两位数
+    const baseUrl = "http://192.168.68.90:3001/calendar";
+    const dynamicUrl = `${baseUrl}/${year}/${month}`;
+    const formattedDate = `${year}-${month}-${day}`;
+</script>
+<div class="sidebar">
+  <h2>竹文常用連結</h2>
+<ul>
+    <li><a href="/">首頁</a></li>
+    <hr> <!-- 分隔线 -->
+    <li class="no-link">慢箋</li>
+    <li><a href="/gantt" target="_blank">甘特追蹤</a></li>
+    <li><a href="/manageprescription">處方管理</a></li>
+    <li><a href="http://192.168.68.90:7000/" target="_blank">line發送訊息</a></li>
+    <hr> <!-- 分隔线 -->
+    <li class="no-link">查詢</li>
+      <li><a href="/search">處方查詢</a></li>
+    <hr> <!-- 分隔线 -->
+      <li class="no-link">數據</li>
+      <li><a href="/dashboard">儀錶板</a></li>
+      <li><a id="dynamic-link" href="#">自動跳轉日曆</a></li>
+      <li><a href="/weeks/2024/11/21">日曆走勢</a></li>
+    <hr> <!-- 分隔线 -->
+    <li class="no-link">庫存</li>
+    <li><a href="/stock" target="_blank">進貨單查詢</a></li>
+    <li><a href="/orderskeyin" target="_blank">進貨單輸入</a></li>
+    <hr> <!-- 分隔线 -->
+    <li class="no-link">小工具</li>
+    <li><a href="http://192.168.68.85:3005/" target="_blank">筆記系統</a></li>
+    <hr> <!-- 分隔线 -->
+    <li><a href="https://zhuwen.com.tw/line/linechat.php" target="_blank">linechat</a></li>
+</ul>
+</div>

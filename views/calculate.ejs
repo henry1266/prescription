@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>處方成本結果</title>
+  <link rel="stylesheet" href="/css/styles.css">
+ 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+  .price table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 15px; /* 原來的 18px 的 80% */
+    text-align: left;
+  }
+  .price th, .price td {
+    padding: 6px; /* 調整內邊距，使表格變矮 */
+    border-bottom: 1px solid #ddd;
+  }
+  .price th {
+    background-color: #f2f2f2;
+  }
+  .price tr:hover {
+    background-color: #f5f5f5;
+  }
+  .price .total-row {
+    font-weight: bold;
+    background-color: #e0e0e0;
+  }
+  .price td {
+    width: 25%; /* 調整單元格寬度，使表格變寬 */
+  }
+</style>
+</head>
+
+<body>
+  <h1>處方成本結果 - 從 <%= startDate %> 到 <%= endDate %></h1>
+
+<div id="pretypeFilter">
+  <label>
+    <input type="radio" name="pretypeFilter" value="all" onclick="updatePretypeFilter('all')" checked>
+    全部
+  </label>
+  <label>
+    <input type="radio" name="pretypeFilter" value="01" onclick="updatePretypeFilter('01')">
+    01一般
+  </label>
+  <label>
+    <input type="radio" name="pretypeFilter" value="02" onclick="updatePretypeFilter('02')">
+    02藥水
+  </label>
+  <label>
+    <input type="radio" name="pretypeFilter" value="03" onclick="updatePretypeFilter('03')">
+    03其他
+  </label>
+  <label>
+    <input type="radio" name="pretypeFilter" value="04" onclick="updatePretypeFilter('04')">
+    04慢箋
+  </label>
+</div>
+
+  <table border="1">
+    <thead>
+      <tr>
+        <th>操作</th><th>處方日期</th><th>處方時間</th><th>處方成本</th><th>患者資訊</th>
+      </tr>
+    </thead>
+    <tbody id="prescription-table">
+      <!-- This table will be dynamically populated with filtered prescriptions -->
+    </tbody>
+  </table>
+  <a href="/">返回主頁</a>
+<div class="price">
+  <table border="1">
+  <tr>
+    <th>類別</th><th>總成本</th><th>平均價格</th><th>總人數</th>
+  </tr>
+  <tr>
+    <td>普通箋</td>
+    <td id="totalCostPretype01">0.00</td>
+    <td id="averagePrescriptionCost01">0.00</td>
+    <td id="totalPatients01">0</td>
+  </tr>
+  <tr>
+    <td>藥水箋</td>
+    <td id="totalCostPretype02">0.00</td>
+    <td id="averagePrescriptionCost02">0.00</td>
+    <td id="totalPatients02">0</td>
+  </tr>
+  <tr>
+    <td>其他</td>
+    <td id="totalCostPretype03">0.00</td>
+    <td>無數據</td>
+    <td id="totalPatients03">0</td>
+  </tr>
+  <tr>
+    <td>慢箋</td>
+    <td id="totalCostPretype04">0.00</td>
+    <td>無數據</td>
+    <td id="totalPatients04">0</td>
+  </tr>
+  <tr>
+    <td><strong>總計</strong></td>
+    <td id="totalCost"><strong>0.00</strong></td>
+    <td>無數據</td>
+    <td id="totalPatients"><strong>0</strong></td>
+  </tr>
+</table>
+</div>
+
+<script>
+    let myChart; // Declare globally
+
+  function updatePretypeFilter(option) {
+    filterOption = option;
+
+    // Destroy the old chart before creating a new one
+    if (myChart) {
+      myChart.destroy();
+    }
+    updateView(); // Re-render the table and chart
+  }
+  
+// Render the filtered prescriptions
+function renderSortedPrescriptions(sortedPrescriptions) {
+  const tableBody = document.getElementById('prescription-table');
+  tableBody.innerHTML = ''; // Clear the table body
+
+  sortedPrescriptions.forEach(prescription => {
+    const prescriptionRow = `
+      <tr>
+        <td>
+          <button onclick="togglePrescription('${prescription._id}')">展開/收合</button>
+        </td>
+        <td>${prescription.predate}</td>
+        <td>${prescription.presec}</td>
+        <td>${prescription.prescriptionTotalCost.toFixed(2)}</td>
+<td colspan="6" class="prescription-info"
+    style="
+            ${prescription.pvip === 'yes' ? 'color: orange;' : 
+              (prescription.pretype === '04' ? 'color: blue;' :
+              prescription.pretype === '03' ? 'color: purple;' :
+              prescription.pretype === '02' ? 'color: green;' :  
+                (prescription.prescriptionTotalCost > 66 ? 'color: red;' : ''))}">
+  <span id="patient-info-${prescription._id}">${prescription.pretype}姓名: ${prescription.pname}   <a href="http://192.168.68.90:3001/searchPrescriptions?pid=${prescription.pid}" target="_blank">身分證: ${prescription.pid}</a></span>
+</td>
+       <td>
+       <button onclick="deletePrescription('${prescription._id}')">Delete</button>
+    </td>
+      </tr>
+      <tr id="prescription-${prescription._id}" style="display: none; background-color: #FFF9E6;">
+        <td colspan="7">
+          <table border="1" width="100%">
+            <tr>
+              <th>藥品名稱</th>
+              <th>健保碼</th>
+              <th>數量</th>
+              <th>單價</th>
+              <th>藥品總成本</th>
+            </tr>
+            ${prescription.drug.map(drug => `
+              <tr>
+                <td>${drug.dname}</td>
+                <td>${drug.dinsuranceCode}</td>
+                <td>${drug.dcount}</td>
+                <td>${drug.dcost}</td>
+                <td>${drug.totalCost}</td>
+              </tr>`).join('')}
+          </table>
+        </td>
+      </tr>
+    `;
+    tableBody.innerHTML += prescriptionRow;
+  });
+}
+
+// Create and render the chart
+function renderChart(sortedPrescriptions) {
+    const ctx = document.getElementById('costChart').getContext('2d');
+    
+    // Adjust canvas resolution to prevent blurring
+    const canvas = document.getElementById('costChart');
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    // Set the actual resolution of the canvas to match its CSS size
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio); // Scale the canvas context to match the new resolution
+	
+    const chartData = {
+        labels: sortedPrescriptions.map(prescription => prescription.pname),
+        datasets: [{
+            label: '總成本',
+            data: sortedPrescriptions.map(prescription => prescription.prescriptionTotalCost),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    // Define base chart options
+    const chartOptions = {
+        responsive: false,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+        plugins: {
+            annotation: {
+                annotations: {
+                    line1: {
+                        type: 'line',
+                        borderColor: 'red',
+                        borderWidth: 2,
+                        label: {
+                            enabled: true,
+                            position: 'start',
+                            backgroundColor: 'rgba(255,0,0,0.5)'
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Set different annotation line positions based on the selected filterOption
+    if (filterOption === '01') {
+        chartOptions.plugins.annotation.annotations.line1.yMin = 66;
+        chartOptions.plugins.annotation.annotations.line1.yMax = 66;
+        chartOptions.plugins.annotation.annotations.line1.label.content = '66';
+    } else if (filterOption === '02') {
+        chartOptions.plugins.annotation.annotations.line1.yMin = 100;
+        chartOptions.plugins.annotation.annotations.line1.yMax = 100;
+        chartOptions.plugins.annotation.annotations.line1.label.content = '100';
+    } else {
+        // Default annotation (if needed for other options)
+        chartOptions.plugins.annotation.annotations.line1.yMin = 100;
+        chartOptions.plugins.annotation.annotations.line1.yMax = 100;
+        chartOptions.plugins.annotation.annotations.line1.label.content = '100';
+    }
+
+    // Destroy existing chart if it exists
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: chartOptions
+    });
+
+    // Add double-click event listener to chart
+    document.getElementById('costChart').addEventListener('dblclick', function(event) {
+        const activePoints = myChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+        
+        if (activePoints.length) {
+            const index = activePoints[0].index;
+            const prescriptionId = sortedPrescriptions[index]._id;
+            togglePrescription(prescriptionId);
+        }
+    });
+}
+
+
+  let allExpanded = false; // 追踪當前展開或收合的狀態
+
+  // 一次展開或收合全部處方
+function toggleAllPrescriptions() {
+  allExpanded = !allExpanded; // 切換狀態
+  const prescriptions = <%- JSON.stringify(prescriptions) %>;
+  
+  prescriptions.forEach(prescription => {
+    const row = document.getElementById('prescription-' + prescription._id);
+    
+    if (allExpanded) {
+      row.style.display = 'table-row'; // 展開所有
+    } else {
+      row.style.display = 'none'; // 收合所有
+    }
+  });
+
+  // 更新按鈕文字
+  document.getElementById('toggleAllPrescriptionsBtn').textContent = allExpanded ? '收合全部處方' : '展開全部處方';
+}
+// 單個處方的展開或收合 (僅隱藏/顯示詳細處方，不處理病患資訊)
+function togglePrescription(id) {
+  const row = document.getElementById('prescription-' + id);
+
+  if (row.style.display === 'none') {
+    row.style.display = 'table-row'; // 展開處方詳細
+  } else {
+    row.style.display = 'none'; // 收合處方詳細
+  }
+}
+
+// 將時間格式 "HH:MM" 轉換為總分鐘數
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+let filterOption = 'all'; // 預設為全部顯示
+
+// 過濾處方根據當前選擇的選項
+function filterPrescriptions(prescriptions) {
+  if (filterOption === 'non04') {
+    // 只顯示非 "04" 的處方
+    return prescriptions.filter(prescription => prescription.pretype !== '04');
+  } else if (filterOption === '01') {
+    // 只顯示非 "01" 的處方
+    return prescriptions.filter(prescription => prescription.pretype === '01');
+  } else if (filterOption === '02') {
+    // 只顯示非 "02" 的處方
+    return prescriptions.filter(prescription => prescription.pretype === '02');
+  } else if (filterOption === '03') {
+    // 只顯示非 "03" 的處方
+    return prescriptions.filter(prescription => prescription.pretype === '03');
+  } else if (filterOption === '04') {
+    // 只顯示 "04" 的處方
+    return prescriptions.filter(prescription => prescription.pretype === '04');
+  } else {
+    // 顯示全部處方
+    return prescriptions;
+  }
+}
+
+// 更新表格和圖表，根據當前的切換狀態
+function updateView() {
+  const prescriptions = <%- JSON.stringify(prescriptions) %>;
+
+  // 過濾並排序處方
+  const filteredPrescriptions = filterPrescriptions(prescriptions);
+  const sortedPrescriptions = filteredPrescriptions.sort((a, b) => {
+    if (a.predate === b.predate) {
+      return timeToMinutes(a.presec) - timeToMinutes(b.presec);
+    }
+    return b.predate.localeCompare(a.predate);
+  });
+
+  // 渲染排序後的處方和圖表
+  renderSortedPrescriptions(sortedPrescriptions);
+  renderChart(sortedPrescriptions);
+
+  // 初始化各類型的統計變數
+  let totalCostPretype01 = 0, totalPatients01 = 0;
+  let totalCostPretype02 = 0, totalPatients02 = 0;
+  let totalCostPretype03 = 0, totalPatients03 = 0;
+  let totalCostPretype04 = 0, totalPatients04 = 0;
+  let totalCost = 0;
+  const totalPatients = prescriptions.length;
+
+  // 計算統計數據，並累計每個 pretype 的數據
+  prescriptions.forEach(prescription => {
+    const cost = prescription.prescriptionTotalCost;
+    totalCost += cost;
+
+    switch (prescription.pretype) {
+      case '01':
+        totalCostPretype01 += cost;
+        totalPatients01++;
+        break;
+      case '02':
+        totalCostPretype02 += cost;
+        totalPatients02++;
+        break;
+      case '03':
+        totalCostPretype03 += cost;
+        totalPatients03++;
+        break;
+      case '04':
+        totalCostPretype04 += cost;
+        totalPatients04++;
+        break;
+    }
+  });
+
+  // 計算每個類別的平均成本
+  const averagePrescriptionCost01 = totalPatients01 ? (totalCostPretype01 / totalPatients01) : 0;
+  const averagePrescriptionCost02 = totalPatients02 ? (totalCostPretype02 / totalPatients02) : 0;
+  const averagePrescriptionCost03 = totalPatients03 ? (totalCostPretype03 / totalPatients03) : 0;
+  const averagePrescriptionCost04 = totalPatients04 ? (totalCostPretype04 / totalPatients04) : 0;
+
+  // 更新 HTML 中的統計數據
+  document.getElementById('totalCostPretype01').textContent = `普通箋總成本: ${totalCostPretype01.toFixed(2)}`;
+  document.getElementById('averagePrescriptionCost01').textContent = `普通箋平均價格: ${averagePrescriptionCost01.toFixed(2)}`;
+  document.getElementById('totalPatients01').textContent = `普通箋總人數: ${totalPatients01}`;
+
+  document.getElementById('totalCostPretype02').textContent = `藥水箋總成本: ${totalCostPretype02.toFixed(2)}`;
+  document.getElementById('averagePrescriptionCost02').textContent = `藥水箋平均價格: ${averagePrescriptionCost02.toFixed(2)}`;
+  document.getElementById('totalPatients02').textContent = `藥水箋總人數: ${totalPatients02}`;
+
+  document.getElementById('totalCostPretype03').textContent = `其他總成本: ${totalCostPretype03.toFixed(2)}`;
+  document.getElementById('totalPatients03').textContent = `其他總人數: ${totalPatients03}`;
+
+  document.getElementById('totalCostPretype04').textContent = `日箋總成本: ${totalCostPretype04.toFixed(2)}`;
+  document.getElementById('totalPatients04').textContent = `慢箋總人數: ${totalPatients04}`;
+
+  document.getElementById('totalPatients').textContent = `總人次: ${totalPatients}`;
+  document.getElementById('totalCost').textContent = `總金額: ${totalCost.toFixed(2)}`;
+}
+
+
+    // 初始化頁面
+    document.addEventListener('DOMContentLoaded', function() {
+      updateView(); // 加載初始視圖
+    });
+async function deletePrescription(id) {
+    if (confirm('Are you sure you want to delete this prescription?')) {
+      try {
+        const response = await fetch(`/delete/${id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          location.reload(); // Reload the page to reflect the deletion
+        } else {
+          alert('Failed to delete the prescription');
+        }
+      } catch (error) {
+        console.error('Error deleting prescription:', error);
+        alert('Error deleting the prescription');
+      }
+    }
+  }
+
+</script>
+
+<div class="fixed-chart">
+  <canvas id="costChart" style="width: 100%; height: 100%;"></canvas>
+</div>
+</body>
+</html>

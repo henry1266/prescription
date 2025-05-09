@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 10px;
+        }
+        h1 {
+            font-size: 2em;
+            color: #4CAF50;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.6rem;
+            width: 100%;
+            max-width: 700px;
+            margin-top: 20px;
+        }
+        .day-header, .day, .empty {
+            padding: 0.5rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+        .day-header {
+            background-color: #4CAF50;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: default;
+        }
+        .day.sunday {
+            background-color: #e0e0e0;
+        }
+        .day .date {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .day .value {
+            font-size: 1.4rem;
+            color: #666;
+            transition: color 0.3s ease;
+        }
+    .weekly-header, .weekly-total {
+        text-align: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #e8f5e9;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-weight: bold;
+    }
+
+        .weekly-summary {
+        position: fixed;
+        top: 16rem; /* 固定到右側 */
+        width: 5rem;
+        display: grid;
+        margin-left: 50rem;
+
+    }
+        
+        .empty {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            cursor: default;
+        }
+        h2 {
+            font-size: 1.5em;
+            color: #333;
+        }
+        .navigation-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .nav-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .nav-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <%- include('sidebar') %>
+   <script>
+    // 獲取當前系統時間
+    //const today = new Date();
+    //const year = today.getFullYear();
+    //const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始，+1 並保證兩位數
+    //const day = String(today.getDate()).padStart(2, '0'); // 保證日期是兩位數
+
+    // 動態生成 URL
+    //const baseUrl = "http://192.168.68.90:3001/calendar";
+    //const dynamicUrl = `${baseUrl}/${year}/${month}`;
+
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = `${year}-${month} 月處方數`;
+  </script>
+    <h1>竹文診所 <%= moment(datesInMonth[0].date).format('YYYY MM') %></h1>
+    <h2>月總量: <%= totalSum %></h2>
+    <h2>工作日平均: <%= average %></h2>
+    <div class="calendar">
+        <!-- Day headers for 日一二三四五六 -->
+        <div class="day-header">日</div>
+        <div class="day-header">一</div>
+        <div class="day-header">二</div>
+        <div class="day-header">三</div>
+        <div class="day-header">四</div>
+        <div class="day-header">五</div>
+        <div class="day-header">六</div>
+        
+        
+        <!-- Empty spaces for alignment based on the first day of the month -->
+        <% const firstDayOfWeek = moment(datesInMonth[0].date).day(); %>
+        <% for (let i = 0; i < firstDayOfWeek; i++) { %>
+            <div class="empty"></div>
+        <% } %>
+        
+        <!-- Days in the month with color adjustment based on the value -->
+        <% datesInMonth.forEach(day => { 
+            const colorIntensity = Math.min(255, 50 + day.value * 10);
+            const color = `rgb(${colorIntensity}, 0, 0)`;
+            const isSunday = moment(day.date).day() === 0; // Check if the day is Sunday
+        %>
+            <div 
+                class="day <%= isSunday ? 'sunday' : '' %>" 
+                onclick="goToDailyChart('<%= moment(day.date).format('YYYY-MM-DD') %>')">
+                <div class="date"><%= moment(day.date).format('D') %></div>
+                <div class="value" style="color: <%= color %>;">
+                    <%= day.value %>張
+                </div>
+            </div>
+        <% }) %>
+    
+        </div>
+        <!-- 週加總表格 -->
+        <div class="weekly-summary">
+            <div class="weekly-header">週加總</div>
+            <% 
+            let weekSum = 0; 
+            let weekNumber = 1; 
+            datesInMonth.forEach((day, index) => { 
+                weekSum += day.value; 
+                const isLastDay = index === datesInMonth.length - 1;
+                const isEndOfWeek = moment(day.date).day() === 6 || isLastDay;
+
+                if (isEndOfWeek) { 
+            %>
+                <div class="weekly-total">第<%= weekNumber %>週: <%= weekSum %>張</div>
+            <% 
+                    weekSum = 0; 
+                    weekNumber++; 
+                } 
+            }); 
+            %>
+        </div>
+    </div>
+</div>
+
+    <!-- Navigation buttons -->
+    <div class="navigation-buttons">
+        <button class="nav-btn" onclick="goToPreviousMonth()">上一個月</button>
+        <button class="nav-btn" onclick="goToNextMonth()">下一個月</button>
+    </div>
+    <script>
+        function goToPreviousMonth() {
+            const currentUrl = window.location.href;
+            const match = currentUrl.match(/calendar\/(\d{4})\/(\d{1,2})/);
+            if (match) {
+                const currentYear = parseInt(match[1], 10);
+                const currentMonth = parseInt(match[2], 10);
+                let prevYear = currentYear;
+                let prevMonth = currentMonth - 1;
+                if (prevMonth < 1) {
+                    prevMonth = 12;
+                    prevYear -= 1;
+                }
+                const prevUrl = `http://192.168.68.90:3001/calendar/${prevYear}/${prevMonth}`;
+                window.location.href = prevUrl;
+            } else {
+                alert("URL 格式不正確，無法計算上一個月。");
+            }
+        }
+
+        function goToNextMonth() {
+            const currentUrl = window.location.href;
+            const match = currentUrl.match(/calendar\/(\d{4})\/(\d{1,2})/);
+            if (match) {
+                const currentYear = parseInt(match[1], 10);
+                const currentMonth = parseInt(match[2], 10);
+                let nextYear = currentYear;
+                let nextMonth = currentMonth + 1;
+                if (nextMonth > 12) {
+                    nextMonth = 1;
+                    nextYear += 1;
+                }
+                const nextUrl = `http://192.168.68.90:3001/calendar/${nextYear}/${nextMonth}`;
+                window.location.href = nextUrl;
+            } else {
+                alert("URL 格式不正確，無法計算下一個月。");
+            }
+        }
+
+        function goToDailyChart(date) {
+            const url = `http://192.168.68.90:3001/customer-time-chart?predate=${date}`;
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>

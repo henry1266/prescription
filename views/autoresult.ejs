@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢结果</title>
+  <style>
+    .hidden {
+      display: none;
+    }
+    .prescription-info {
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  
+  <h1>患者ID: <%= pid %></h1>
+
+  <!-- 显示患者姓名和身份证号，不折叠 -->
+  <div>
+    <h2>患者姓名: <%= pname %> - 身分證號: <%= pid %></h2>
+  </div>
+
+  <% if (errorMessage) { %>
+    <h2 style="color: red;"><%= errorMessage %></h2>
+  <% } else { %>
+
+    <!-- 一次展开所有处方的按钮 -->
+    <button id="toggleAllBtn" onclick="toggleAllPrescriptions()">展开所有处方</button>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>操作</th>
+          <th>就診日期</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% Object.keys(prescriptionsByDate).forEach(function(date) { %>
+          <% prescriptionsByDate[date].forEach(function(prescription) { %>
+            <tr>
+              <!-- 展开/收合按钮 -->
+              <td>
+                <button onclick="togglePrescription('<%= prescription._id %>')">展开/收合</button>
+              </td>
+              <td colspan="6" 
+                  class="prescription-info"
+                  style="<%= prescription.prescriptionTotalCost && prescription.prescriptionTotalCost > 66 ? 'color: red;' : '' %>">
+                <!-- 使用三元表达式处理 undefined 或 null 情况 -->
+                <span><%= date %></span>
+                <span>總成本: <%= prescription.prescriptionTotalCost ? prescription.prescriptionTotalCost.toFixed(2) : '未知' %></span>
+				<span style="display: none;" id="patient-info-<%= prescription._id %>">
+                  
+                </span>
+              </td>
+            </tr>
+
+            <!-- 藥品列表 (默认隐藏) -->
+            <tr id="prescription-<%= prescription._id %>" style="display: none;">
+              <td colspan="7">
+                <table border="1" width="100%">
+                  <tr>
+                    <th>藥品名稱</th>
+                    <th>健保碼</th>
+                    <th>數量</th>
+                    <th>單價</th>
+                    <th>藥品總成本</th>
+                  </tr>
+                  <% prescription.drug.forEach(function(drug) { %>
+                    <tr>
+                      <td><%= drug.dname %></td>
+                      <td><%= drug.dinsuranceCode %></td>
+                      <td><%= drug.dcount %></td>
+                      <td><%= drug.dcost %></td>
+                      <td><%= drug.totalCost %></td>
+                    </tr>
+                  <% }) %>
+                </table>
+              </td>
+            </tr>
+          <% }) %>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+
+  <a href="/">返回主页面</a>
+
+  <script>
+    // 单个日期的展开/折叠
+    function togglePrescription(id) {
+      const row = document.getElementById('prescription-' + id);
+      const patientInfo = document.getElementById('patient-info-' + id);
+
+      if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        patientInfo.style.display = 'inline';  // 展开时显示处方信息
+      } else {
+        row.style.display = 'none';
+        patientInfo.style.display = 'none';  // 收合时隐藏处方信息
+      }
+    }
+
+    // 展开/折叠所有日期的处方
+    function toggleAllPrescriptions() {
+      const allElements = document.querySelectorAll('tr[id^="prescription-"]');
+      const toggleBtn = document.getElementById('toggleAllBtn');
+      const isAllHidden = [...allElements].every(el => el.style.display === 'none');
+
+      allElements.forEach(el => {
+        const patientInfo = document.getElementById('patient-info-' + el.id.replace('prescription-', ''));
+        el.style.display = isAllHidden ? 'table-row' : 'none';
+        patientInfo.style.display = isAllHidden ? 'inline' : 'none';
+      });
+
+      toggleBtn.innerText = isAllHidden ? '收合所有处方' : '展开所有处方';
+    }
+  </script>
+</body>
+</html>

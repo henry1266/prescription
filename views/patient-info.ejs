@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修改病人信息</title>
+</head>
+<body>
+    <h1>修改病人信息 - 患者ID: <%= pid %></h1>
+
+    <% if (errorMessage) { %>
+        <h2 style="color: red;"><%= errorMessage %></h2>
+    <% } else { %>
+        <form action="/updatePatientInfo/<%= pid %>" method="POST">
+            <input type="hidden" name="pid" value="<%= pid %>">
+            <div>
+                <label for="pname">患者姓名:</label>
+                <input type="text" name="pname" id="pname" value="<%= patient.pname %>" required>
+            </div>
+            <div>
+                <label for="pidnum">身分证号:</label>
+                <input type="text" name="pidnum" id="pidnum" value="<%= patient.pidnum %>" required>
+            </div>
+            <div>
+                <label for="contact">联系电话:</label>
+                <input type="text" name="contact" id="contact" value="<%= patient.contact %>" required>
+            </div>
+            <div>
+                <label for="address">地址:</label>
+                <input type="text" name="address" id="address" value="<%= patient.address %>" required>
+            </div>
+            <button type="submit">提交修改</button>
+        </form>
+    <% } %>
+    <a href="/">返回主页</a>
+</body>
+</html>

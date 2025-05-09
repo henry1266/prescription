@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>處方結果</title>
+  <script src="/socket.io/socket.io.js"></script> <!-- 引入 Socket.IO 客户端库 -->
+  <style>
+    button {
+      margin-right: 10px;
+    }
+    .prescription-info {
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <h1>處方資訊自動更新</h1>
+
+  <!-- 渲染處方的容器 -->
+  <div id="prescription-container">
+    <% prescriptions.forEach(prescription => { %>
+      <div class="prescription-info" id="prescription-<%= prescription._id %>">
+        <span>處方日: <%= prescription.predate %></span>
+        <span>患者姓名: <%= prescription.pname %></span>
+        <span>總成本: <%= prescription.prescriptionTotalCost %></span>
+      </div>
+    <% }) %>
+  </div>
+
+  <script>
+    // 连接到服务器端
+    const socket = io();
+
+    // 监听 prescription 更新事件
+    socket.on('refreshPrescription', function(data) {
+      const prescriptions = data.prescriptions;
+
+      // 获取容器元素
+      const container = document.getElementById('prescription-container');
+      container.innerHTML = ''; // 清空容器
+
+      // 遍历處方数据，重新渲染
+      prescriptions.forEach(prescription => {
+        const prescriptionDiv = document.createElement('div');
+        prescriptionDiv.classList.add('prescription-info');
+        prescriptionDiv.id = `prescription-${prescription._id}`;
+
+        prescriptionDiv.innerHTML = `
+          <span>處方日: ${prescription.predate}</span>
+          <span>患者姓名: ${prescription.pname}</span>
+          <span>總成本: ${prescription.prescriptionTotalCost}</span>
+        `;
+
+        container.appendChild(prescriptionDiv);
+      });
+    });
+  </script>
+</body>
+</html>

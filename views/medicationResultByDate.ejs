@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>藥品查詢結果</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    button {
+      margin-left: 10px;
+    }
+    .chart-container {
+      width: 40%;
+      margin: 20px auto;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>藥品查詢結果 - 日期: <%= startDate %> <%= endDate %></h1>
+
+
+
+  <!-- 如果有錯誤訊息，顯示錯誤訊息 -->
+  <% if (errorMessage) { %>
+    <h2 style="color: red;"><%= errorMessage %></h2>
+  <% } else { %>
+    <table>
+      <thead>
+        <tr>
+          <th>健保碼</th>
+          <th>藥品名稱</th>
+          <th>單價 (dcost)</th>
+          <th>總數量<button onclick="sortByQuantity()">排序</button></th>
+          <th>總成本<button onclick="sortByCost()">排序</button></th>
+        </tr>
+      </thead>
+      <tbody id="medications-table-body">
+        <% Object.keys(medicationsList).forEach(function(key) { %>
+          <tr>
+            <td><%= medicationsList[key].dinsuranceCode %></td>
+            <td><%= medicationsList[key].dname %></td>
+            <td><%= medicationsList[key].dcost.toFixed(2) %></td>
+            <td><%= medicationsList[key].dcount %></td>
+            <td><%= medicationsList[key].totalCost.toFixed(2) %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <h2>總成本: <span id="totalCost"><%= totalCost.toFixed(2) %></span></h2>
+
+    <!-- 四個圖表 -->
+    <div class="chart-container">
+      <canvas id="barChartQuantity"></canvas> <!-- 長條圖: 總數量 -->
+    </div>
+    <div class="chart-container">
+      <canvas id="pieChartQuantity"></canvas> <!-- 圓餅圖: 總數量 -->
+    </div>
+    <div class="chart-container">
+      <canvas id="barChartCost"></canvas> <!-- 長條圖: 總成本 -->
+    </div>
+    <div class="chart-container">
+      <canvas id="pieChartCost"></canvas> <!-- 圓餅圖: 總成本 -->
+    </div>
+  <% } %>
+
+  <a href="/">返回主頁</a>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // 获取药品列表
+    let medications = <%- JSON.stringify(medicationsList) %>;
+
+// 初次渲染图表時，使用 startDate 和 endDate 標題
+let startDate = "<%= startDate %>";
+let endDate = "<%= endDate %>";
+
+
+
+    // 按總數量排序
+    function sortByQuantity() {
+      const sortedMedications = Object.keys(medications).sort((a, b) => {
+        return medications[b].dcount - medications[a].dcount; // 从大到小排序
+      });
+      renderTable(sortedMedications);
+    }
+
+    // 按總成本排序
+    function sortByCost() {
+      const sortedMedications = Object.keys(medications).sort((a, b) => {
+        return medications[b].totalCost - medications[a].totalCost; // 从大到小排序
+      });
+      renderTable(sortedMedications);
+    }
+
+    // 渲染表格
+    function renderTable(sortedKeys) {
+      const tableBody = document.getElementById('medications-table-body');
+      tableBody.innerHTML = ''; // 清空现有表格内容
+
+      // 重新渲染表格数据
+      sortedKeys.forEach(key => {
+        const row = `
+          <tr>
+            <td>${medications[key].dinsuranceCode}</td>
+            <td>${medications[key].dname}</td>
+            <td>${medications[key].dcost.toFixed(2)}</td>
+            <td>${medications[key].dcount}</td>
+            <td>${medications[key].totalCost.toFixed(2)}</td>
+          </tr>
+        `;
+        tableBody.innerHTML += row;
+      });
+      renderCharts(sortedKeys);
+    }
+
+// 渲染四個圖表
+function renderCharts(sortedKeys) {
+  const labels = [];
+  const quantities = [];
+  const costs = [];
+
+  // 分離前五大的藥品
+  sortedKeys.slice(0, 10).forEach(key => {
+    labels.push(medications[key].dname);
+    quantities.push(medications[key].dcount);
+    costs.push(medications[key].totalCost);
+  });
+
+  // 整併其餘藥品為“其他”
+  if (sortedKeys.length > 10) {
+    let otherQuantity = 0;
+    let otherCost = 0;
+
+    sortedKeys.slice(10).forEach(key => {
+      otherQuantity += medications[key].dcount;
+      otherCost += medications[key].totalCost;
+    });
+
+    labels.push("其他");
+    quantities.push(otherQuantity);
+    costs.push(otherCost);
+  }
+
+  // 長條圖 - 顯示總數量
+  const barCtxQuantity = document.getElementById('barChartQuantity').getContext('2d');
+  new Chart(barCtxQuantity, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '總數量',
+        data: quantities,
+        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // 圓餅圖 - 顯示總數量
+  const pieCtxQuantity = document.getElementById('pieChartQuantity').getContext('2d');
+  new Chart(pieCtxQuantity, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '總數量',
+        data: quantities,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.5)',
+          'rgba(54, 162, 235, 0.5)',
+          'rgba(255, 206, 86, 0.5)',
+          'rgba(75, 192, 192, 0.5)',
+          'rgba(153, 102, 255, 0.5)',
+          'rgba(255, 159, 64, 0.5)'
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 159, 64, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true
+    }
+  });
+
+  // 長條圖 - 顯示總成本
+  const barCtxCost = document.getElementById('barChartCost').getContext('2d');
+  new Chart(barCtxCost, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '總成本',
+        data: costs,
+        backgroundColor: 'rgba(153, 102, 255, 0.5)',
+        borderColor: 'rgba(153, 102, 255, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // 圓餅圖 - 顯示總成本
+  const pieCtxCost = document.getElementById('pieChartCost').getContext('2d');
+  new Chart(pieCtxCost, {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '總成本',
+        data: costs,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.5)',
+          'rgba(54, 162, 235, 0.5)',
+          'rgba(255, 206, 86, 0.5)',
+          'rgba(75, 192, 192, 0.5)',
+          'rgba(153, 102, 255, 0.5)',
+          'rgba(255, 159, 64, 0.5)'
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 159, 64, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true
+    }
+  });
+}
+
+
+    // 初次渲染图表
+    const initialKeys = Object.keys(medications);
+    renderCharts(initialKeys);
+  </script>
+</body>
+</html>

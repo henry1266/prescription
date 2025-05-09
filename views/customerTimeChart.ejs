@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>來客時間分佈圖</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+    .fixed-chart {
+      position: fixed;
+      top: 5rem; /* 距離頁面頂部 10px */
+      right: 3rem; /* 距離頁面右側 10px */
+      width: 30rem; /* 圖表寬度 */
+      height: 20rem; /* 圖表高度 */
+    }
+    h1 {
+            margin-left: 15rem;
+            font-size: 2em;
+            color: #4CAF50;
+        }
+  </style>
+</head>
+<body>
+  <h1>來客時間分佈圖 - 日期: <%= formattedDate1 %></h1>
+<%- include('sidebar') %>
+   <script>
+    // 獲取當前系統時間
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始，+1 並保證兩位數
+    const day = String(today.getDate()).padStart(2, '0'); // 保證日期是兩位數
+
+    // 動態生成 URL
+    const baseUrl = "http://192.168.68.90:3001/calendar";
+    const dynamicUrl = `${baseUrl}/${year}/${month}`;
+
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = `竹文 ${year}-${month} 月處方數`;
+  </script>
+<div class="fixed-chart" >
+<canvas id="timeChart" style="width: 100%; height: 100%;"></canvas>
+</div>
+  <script>
+    // 將時間數據轉換為小時進行計數
+    const times = <%- JSON.stringify(times) %>;
+    const hoursCount = new Array(24).fill(0);
+
+    times.forEach(time => {
+      const [hour] = time.split(':').map(Number); // 提取小時部分
+      hoursCount[hour]++;
+    });
+
+    const ctx = document.getElementById('timeChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+        datasets: [{
+          label: '來客數量',
+          data: hoursCount,
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: '來客數量'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: '小時'
+            }
+          }
+        }
+      }
+    });
+  </script>
+
+  <a href="/">返回主頁</a>
+</body>
+</html>

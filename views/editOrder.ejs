@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編輯訂單</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .item label, .item input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>編輯訂單</h1>
+    <form action="/orders/update/<%= order.poid %>" method="POST">
+        <label for="poid">貨單ID：</label>
+        <input type="text" id="poid" name="poid" value="<%= order.poid %>" required readonly><br>
+
+        <label for="pobill">账单：</label>
+        <input type="text" id="pobill" name="pobill" value="<%= order.pobill %>" required><br>
+
+        <label for="pobilldate">账单日期：</label>
+        <input type="date" id="pobilldate" name="pobilldate" value="<%= order.pobilldate %>" required><br>
+
+        <label for="posupplier">供应商：</label>
+        <input type="text" id="posupplier" name="posupplier" value="<%= order.posupplier %>" required><br>
+
+        <h3>商品</h3>
+        <div id="items">
+            <% order.items.forEach((item, index) => { %>
+                <div class="item">
+                    <label for="dname">商品名称：</label>
+                    <input type="text" id="dname" name="items[<%= index %>][dname]" value="<%= item.dname %>" required><br>
+
+                    <label for="did">商品ID：</label>
+                    <input type="text" id="did" name="items[<%= index %>][did]" value="<%= item.did %>" required><br>
+
+                    <label for="dquantity">数量：</label>
+                    <input type="number" id="dquantity" name="items[<%= index %>][dquantity]" value="<%= item.dquantity %>" required><br>
+
+                    <label for="dtotalCost">总成本：</label>
+                    <input type="number" id="dtotalCost" name="items[<%= index %>][dtotalCost]" value="<%= item.dtotalCost %>" required><br>
+                </div>
+            <% }); %>
+        </div>
+        <button type="button" onclick="addItem()">添加另一个商品</button><br><br>
+        <button type="submit">提交</button>
+    </form>
+
+    <script>
+        let itemIndex = <%= order.items.length %>;
+        function addItem() {
+            const itemsDiv = document.getElementById('items');
+            const newItemDiv = document.createElement('div');
+            newItemDiv.classList.add('item');
+            newItemDiv.innerHTML = `
+                <label for="dname">商品名称：</label>
+                <input type="text" id="dname" name="items[${itemIndex}][dname]" required><br>
+
+                <label for="did">商品ID：</label>
+                <input type="text" id="did" name="items[${itemIndex}][did]" required><br>
+
+                <label for="dquantity">数量：</label>
+                <input type="number" id="dquantity" name="items[${itemIndex}][dquantity]" required><br>
+
+                <label for="dtotalCost">总成本：</label>
+                <input type="number" id="dtotalCost" name="items[${itemIndex}][dtotalCost]" required><br>
+            `;
+            itemsDiv.appendChild(newItemDiv);
+            itemIndex++;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8 週處方數</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- 引入 Chart.js -->
+    <style>
+        /* 限制圖表大小 */
+        #chart-container, #daily-chart-container {
+            width: 600px; /* 設定寬度 */
+            height: 300px; /* 設定高度 */
+            margin: 20px auto; /* 置中 */
+        }
+
+        canvas {
+            width: 100% !important; /* 讓 Canvas 填滿容器 */
+            height: 100% !important; /* 高度自適應容器 */
+        }
+    </style>
+</head>
+<body>
+    <%- include('sidebar') %>
+    <script>
+    // 將 URL 設置到超連結
+    const dynamicLink = document.getElementById("dynamic-link");
+    dynamicLink.href = dynamicUrl;
+    dynamicLink.textContent = `${year}-${month} 月處方數`;
+
+    // 设置预设值到日期输入框
+	document.getElementById('predate').value = formattedDate;
+	document.getElementById('startdate').value = formattedDate;
+	document.getElementById('enddate').value = formattedDate;
+
+  </script>
+    <h1 style="text-align: center;">8 週處方數</h1>
+
+    <!-- 週總和折線圖 -->
+    <h2 style="text-align: center;">週總和折線圖</h2>
+    <div id="chart-container">
+        <canvas id="weeklySumChart"></canvas>
+    </div>
+
+    <!-- 最近 2~4 周每日數據圖表 -->
+    <h2 style="text-align: center;">最近 2~4 週每日數據折線圖</h2>
+    <div id="daily-chart-container">
+        <canvas id="dailyChart"></canvas>
+    </div>
+
+    <h2 style="text-align: center;">詳細數據</h2>
+    <div  style="text-align: center;">
+        <% datesInWeeks.forEach((week, weekIndex) => { %>
+            <h3>第 <%= weekIndex + 1 %> 週（總和: <%= weeklySums[weekIndex] %>）</h3>
+            <% week.forEach(day => { %>
+                <div>
+                    日期: <%= day.date %>, 數量: <%= day.value %>
+                </div>
+            <% }) %>
+        <% }) %>
+    </div>
+
+    <script>
+        // 週總和數據
+        const weeklySums = <%= JSON.stringify(weeklySums) %>;
+
+        // 生成 X 軸標籤
+        const weeklyLabels = weeklySums.map((_, index) => `第 ${index + 1} 週`);
+       
+        // 繪製 8 週的折線圖
+        const weeklyCtx = document.getElementById('weeklySumChart').getContext('2d');
+        new Chart(weeklyCtx, {
+            type: 'line',
+            data: {
+                labels: weeklyLabels,
+                datasets: [{
+                    label: '每週總和',
+                    data: weeklySums,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '週數'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '總和'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+// 定義數據容器
+const dailyLabels = []; // 日期標籤
+const weekdayData = []; // 禮拜一、二、四、五
+const wedSatData = []; // 禮拜三、六
+
+<% for (let i = 4; i < datesInWeeks.length; i++) { %>
+    <% datesInWeeks[i].forEach(function(day) { %>
+        <% if (day.value > 0) { %> 
+            dailyLabels.push('<%= day.date %>'); // 添加日期標籤
+            var dayOfWeek = new Date('<%= day.date %>').getDay(); // 獲取星期幾
+            if (dayOfWeek === 3 || dayOfWeek === 6) { // 禮拜三或六
+                wedSatData.push(<%= day.value %>);
+                weekdayData.push(null); // 用 null 占位以保持數據對齊
+            } else if (dayOfWeek === 1 || dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 5) { // 禮拜一、二、四、五
+                weekdayData.push(<%= day.value %>);
+                wedSatData.push(null); // 用 null 占位以保持數據對齊
+            }
+        <% } %>
+    <% }) %>
+<% } %>
+
+// 繪製每日數據折線圖
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: dailyLabels, // 每日日期
+        datasets: [
+            {
+                label: '三 & 六',
+                data: wedSatData, // 禮拜三、六的數據
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                fill: true,
+                spanGaps: true // 確保數據連線
+            },
+            {
+                label: '一、二、四、五',
+                data: weekdayData, // 禮拜一、二、四、五的數據
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                fill: true,
+                spanGaps: true // 確保數據連線
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true
+            }
+        },
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: '日期'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: '每日數量'
+                },
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+
+    </script>
+</body>
+</html>

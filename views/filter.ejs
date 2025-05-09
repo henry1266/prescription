@@ -1,0 +1,134 @@
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prescriptions Timeline</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .progress-bar {
+      height: 20px;
+      width: 7rem;
+      background-color: #e0e0e0;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: green;
+      transition: width 0.3s;
+    }
+    .progress-alert {
+      background-color: red !important;
+    }
+    .negative-prem {
+      background-color: red;
+      color: white;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 3px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4f4f4;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+  </style>
+    <link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
+    <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+</head>
+<body>
+
+  <h2>慢性處方箋進度管理</h2>
+  <h3>進行中 總筆數: <%= nonZeroAndNotEmptyPremCount %></h3>
+  <a href="http://192.168.68.90:3001/gantt" class="link-button" target="_blank">甘特版</a>
+  <!-- Table -->
+  <table>
+    <thead>
+      <tr>
+        <th>姓名</th>
+        <th>身分證</th>
+        <th>處方日</th>
+        <th>留單</th>
+        <th>天數</th>
+        <th>次數</th>
+        <th>回診日</th>
+        <th>剩餘天數</th>
+        <th>進度</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <% 
+        const today = new Date();
+        const minDate = new Date(Math.min(...nonZeroAndNotEmptyPrem.map(p => new Date(p.predate))));
+        const maxDate = new Date(Math.max(...nonZeroAndNotEmptyPrem.map(p => new Date(p.calculatedDate))));
+
+        nonZeroAndNotEmptyPrem.forEach(prescription => { 
+          const revisitDate = new Date(prescription.calculatedDate);
+          const predate = new Date(prescription.predate);
+          const remainingDays = Math.ceil((revisitDate - today) / (1000 * 60 * 60 * 24));
+          const totalDays = prescription.preday * prescription.precount;
+          const progressPercent = ((totalDays - remainingDays) / totalDays) * 100;
+          const barColor = remainingDays < 10 ? 'red' : remainingDays < prescription.preday ? 'orange' : 'green';
+        %>
+        <tr>
+          <td><%= prescription.pname %></td>
+          <td><a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
+          <td><%= prescription.formattedPredate %></td>
+          <td class="<%= prescription.prem < 0 ? 'negative-prem' : '' %>"><%= prescription.prem %></td>
+          <td><%= prescription.preday %></td>
+          <td><%= prescription.precount %></td>
+          <td><%= prescription.calculatedDate %></td>
+          <td><%= remainingDays %> 天</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: <%= Math.min(progressPercent, 100) %>%; background-color: <%= barColor %>;">
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <!-- Table for remaining pretype="04", sorted by predate -->
+  <h2>結束</h2>
+  <p>總筆數: <%= remainingPrescriptionsCount %></p>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>姓名</th>
+        <th>身分證</th>
+        <th>處方日</th>
+        <th>留單</th>
+        <th>天數</th>
+        <th>次數</th>
+        <th>回診日</th> <!-- 新增欄位 -->
+      </tr>
+    </thead>
+    <tbody>
+      <% remainingPrescriptions.forEach(prescription => { %>
+        <tr>
+          <td><%= prescription.pname %></td>
+          <td><a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
+          <td><%= prescription.formattedPredate %></td>
+          <td class="<%= prescription.prem < 0 ? 'negative-prem' : '' %>"><%= prescription.prem %></td>
+          <td><%= prescription.preday %></td>
+          <td><%= prescription.precount %></td>
+          <td><%= prescription.calculatedDate %></td> <!-- 顯示計算後的日期 -->
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+</body>
+</html>

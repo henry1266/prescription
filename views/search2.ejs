@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>首頁</title>
+  <%- include('js') %>
+</head>
+<body>
+
+   <%- include('sidebar') %>
+   <div class="content">
+
+    <h1>查詢藥品健保碼</h1>
+  
+    <!-- 表单让用户输入药品健保码 -->
+    <form id="searchForm" action="/searchByInsuranceCode" method="POST">
+      <label for="dinsuranceCode">藥品健保碼:</label>
+      <input type="text" id="dinsuranceCode" name="dinsuranceCode" required>
+      <button type="submit" id="searchButton">查詢</button>
+    </form>
+    <div id="dropdown-container"></div>
+    <div id="result-container"></div>
+
+  </div>
+
+  <script>
+    document.getElementById('dinsuranceCode').addEventListener('keydown', async function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // 阻止表单提交
+        const input = document.getElementById('dinsuranceCode');
+        const query = input.value;
+        if (query.length >= 2) { // 當輸入長度大於等於2時進行查詢
+          try {
+            const response = await fetch(`/searchByInsuranceCode/match?query=${query}`);
+            const results = await response.json();
+            const dropdownContainer = document.getElementById('dropdown-container');
+            const resultContainer = document.getElementById('result-container');
+            dropdownContainer.innerHTML = ''; // 清空之前的結果
+            resultContainer.innerHTML = ''; // 清空之前的結果
+            if (results.length > 1) {
+              const dropdown = document.createElement('select');
+              dropdown.innerHTML = '<option value="">請選擇藥品</option>';
+              results.forEach(result => {
+                const option = document.createElement('option');
+                option.value = result.dinsuranceCode;
+                option.textContent = `${result.dinsuranceCode} - ${result.dname}`;
+                dropdown.appendChild(option);
+              });
+              dropdown.addEventListener('change', () => {
+                input.value = dropdown.value;
+                resultContainer.innerHTML = `<p>藥品名稱: ${dropdown.options[dropdown.selectedIndex].text.split(' - ')[1]}</p>`;
+                document.getElementById('searchButton').focus(); // 將焦點移至查詢按鈕
+              });
+              dropdownContainer.appendChild(dropdown);
+            } else if (results.length === 1) {
+              input.value = results[0].dinsuranceCode;
+              resultContainer.innerHTML = `<p>藥品名稱: ${results[0].dname}</p>`;
+              document.getElementById('searchButton').focus(); // 將焦點移至查詢按鈕
+            } else {
+              alert('找不到匹配的藥品');
+            }
+          } catch (error) {
+            console.error('Error fetching matching codes:', error);
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

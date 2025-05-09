@@ -270,7 +270,7 @@
 
 <script>
         function goToDailyChart(date) {
-        const url = `http://192.168.68.79:3001/customer-time-chart?predate=${date}`;
+        const url = `/customer-time-chart?predate=${date}`;
         window.location.href = url;
         }
         function goToPreviousMonth() {
@@ -285,7 +285,7 @@
                     prevMonth = 12;
                     prevYear -= 1;
                 }
-                const prevUrl = `http://192.168.68.79:3001/dashboard/${prevYear}/${prevMonth}`;
+                const prevUrl = `/dashboard/${prevYear}/${prevMonth}`;
                 window.location.href = prevUrl;
             } else {
                 alert("URL 格式不正確，無法計算上一個月。");
@@ -304,7 +304,7 @@
                     nextMonth = 1;
                     nextYear += 1;
                 }
-                const nextUrl = `http://192.168.68.79:3001/dashboard/${nextYear}/${nextMonth}`;
+                const nextUrl = `/dashboard/${nextYear}/${nextMonth}`;
                 window.location.href = nextUrl;
             } else {
                 alert("URL 格式不正確，無法計算下一個月。");
@@ -312,7 +312,7 @@
         }
 
         function goToDailyChart(date) {
-            const url = `http://192.168.68.79:3001/calculate?startdate=${date}&enddate=${date}`;
+            const url = `/calculate?startdate=${date}&enddate=${date}`;
             window.location.href = url;
         }
     </script>

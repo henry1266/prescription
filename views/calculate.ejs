@@ -188,7 +188,7 @@ function renderSortedPrescriptions(sortedPrescriptions) {
               prescription.pretype === '03' ? 'color: purple;' :
               prescription.pretype === '02' ? 'color: green;' :  
                 (prescription.prescriptionTotalCost > 66 ? 'color: red;' : ''))}">
-  <span id="patient-info-${prescription._id}">${prescription.pretype}姓名: ${prescription.pname}   <a href="http://192.168.68.79:3001/searchPrescriptions?pid=${prescription.pid}" target="_blank">身分證: ${prescription.pid}</a></span>
+  <span id="patient-info-${prescription._id}">${prescription.pretype}姓名: ${prescription.pname}   <a href="/searchPrescriptions?pid=${prescription.pid}" target="_blank">身分證: ${prescription.pid}</a></span>
 </td>
        <td>
        <button onclick="deletePrescription('${prescription._id}')">Delete</button>

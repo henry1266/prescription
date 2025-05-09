@@ -49,7 +49,7 @@
 
   <h2>慢性處方箋進度管理</h2>
   <h3>進行中 總筆數: <%= nonZeroAndNotEmptyPremCount %></h3>
-  <a href="http://192.168.68.90:3001/gantt" class="link-button" target="_blank">甘特版</a>
+  <a href="/gantt" class="link-button" target="_blank">甘特版</a>
   <!-- Table -->
   <table>
     <thead>
@@ -82,7 +82,7 @@
         %>
         <tr>
           <td><%= prescription.pname %></td>
-          <td><a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
+          <td><a href="/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
           <td><%= prescription.formattedPredate %></td>
           <td class="<%= prescription.prem < 0 ? 'negative-prem' : '' %>"><%= prescription.prem %></td>
           <td><%= prescription.preday %></td>
@@ -119,7 +119,7 @@
       <% remainingPrescriptions.forEach(prescription => { %>
         <tr>
           <td><%= prescription.pname %></td>
-          <td><a href="http://192.168.68.90:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
+          <td><a href="/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank"><%= prescription.pid %></a></td>
           <td><%= prescription.formattedPredate %></td>
           <td class="<%= prescription.prem < 0 ? 'negative-prem' : '' %>"><%= prescription.prem %></td>
           <td><%= prescription.preday %></td>

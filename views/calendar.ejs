@@ -95,17 +95,7 @@
        <!-- 導航欄 -->
    
    <script>
-    // 獲取當前系統時間
-    //const today = new Date();
-    //const year = today.getFullYear();
-    //const month = String(today.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始，+1 並保證兩位數
-    //const day = String(today.getDate()).padStart(2, '0'); // 保證日期是兩位數
 
-    // 動態生成 URL
-    //const baseUrl = "http://192.168.68.90:3001/calendar";
-    //const dynamicUrl = `${baseUrl}/${year}/${month}`;
-
-    // 將 URL 設置到超連結
     const dynamicLink = document.getElementById("dynamic-link");
     dynamicLink.href = dynamicUrl;
     dynamicLink.textContent = `${year}-${month} 月處方數`;
@@ -189,7 +179,7 @@
                     prevMonth = 12;
                     prevYear -= 1;
                 }
-                const prevUrl = `http://192.168.68.79:3001/calendar/${prevYear}/${prevMonth}`;
+                const prevUrl = `/calendar/${prevYear}/${prevMonth}`;
                 window.location.href = prevUrl;
             } else {
                 alert("URL 格式不正確，無法計算上一個月。");
@@ -208,7 +198,7 @@
                     nextMonth = 1;
                     nextYear += 1;
                 }
-                const nextUrl = `http://192.168.68.79:3001/calendar/${nextYear}/${nextMonth}`;
+                const nextUrl = `/calendar/${nextYear}/${nextMonth}`;
                 window.location.href = nextUrl;
             } else {
                 alert("URL 格式不正確，無法計算下一個月。");
@@ -216,7 +206,7 @@
         }
 
         function goToDailyChart(date) {
-            const url = `http://192.168.68.79:3001/customer-time-chart?predate=${date}`;
+            const url = `/customer-time-chart?predate=${date}`;
             window.location.href = url;
         }
     </script>

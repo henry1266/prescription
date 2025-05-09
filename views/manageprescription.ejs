@@ -165,7 +165,7 @@ function notifyPatient(pline, pname, startdate, enddate, type, precount, prescri
                     <td><%= prescription.pphone %></td>
                     <td><%= prescription.pdetail %></td>
                     <td>
-                        <a href="http://192.168.68.79:3001/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank">
+                        <a href="/searchPrescriptions?pid=<%= prescription.pid %>" target="_blank">
                             <%= prescription.pid %>
                         </a>
                     </td>

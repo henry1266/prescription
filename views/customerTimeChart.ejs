@@ -31,8 +31,7 @@
     const day = String(today.getDate()).padStart(2, '0'); // 保證日期是兩位數
 
     // 動態生成 URL
-    const baseUrl = "http://192.168.68.90:3001/calendar";
-    const dynamicUrl = `${baseUrl}/${year}/${month}`;
+    const dynamicUrl = `/calendar/${year}/${month}`;
 
     // 將 URL 設置到超連結
     const dynamicLink = document.getElementById("dynamic-link");

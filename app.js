@@ -102,7 +102,7 @@ async function startServer() {
   try {
     await dbManager.connectToServer();
     server.listen(port, () => {
-      console.log(`Server running at http://${app.locals.BACKEND_IP}:${port}`); // Use BACKEND_IP here for logging
+      console.log(`Server running at http://${app.locals.FRONTEND_IP}:${port}`); // Use FRONTEND_IP here for logging
     });
   } catch (err) {
     console.error("Failed to start server:", err);

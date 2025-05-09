@@ -1,10 +1,10 @@
 // routes/updatePrescription.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { ObjectId } = require('mongodb');
-const client = require('../utils/db'); // 引入 MongoDB 客戶端
+const { ObjectId } = require("mongodb");
+const dbManager = require("../utils/database"); // Use the new database manager
 
-router.post('/:id', async (req, res) => {
+router.post("/:id", async (req, res) => {
   const prescriptionId = req.params.id;
   const updatedDrugData = req.body.drug;
   const predate2 = req.body.predate2;
@@ -16,8 +16,7 @@ router.post('/:id', async (req, res) => {
   const pid = req.body.pid;
 
   try {
-    await client.connect();
-    const db = client.db("pharmacy");
+    const db = dbManager.getDb(); // Get DB instance from manager
     const prescriptionsCollection = db.collection("prescriptions");
 
     // 構建藥品的更新數據
@@ -30,25 +29,34 @@ router.post('/:id', async (req, res) => {
     // 使用 ObjectId 轉換處方 ID 並更新處方資訊
     await prescriptionsCollection.updateOne(
       { _id: new ObjectId(prescriptionId) },
-      { $set: { pretype: pretype, prem: prem, preday: preday,precount: precount,predate2: predate2,predate3: predate3,drug: updatedDrugs } }
+      { $set: { 
+          pretype: pretype, 
+          prem: prem, 
+          preday: preday, 
+          precount: precount, 
+          predate2: predate2, 
+          predate3: predate3, 
+          drug: updatedDrugs 
+        } 
+      }
     );
 
     // 渲染 result2 頁面，傳遞修改成功的數據
-    res.render('result2', {
-      message: '處方資訊已成功更新',
+    res.render("result2", {
+      message: "處方資訊已成功更新",
       pid: pid,
       errorMessage: null
     });
   } catch (error) {
-    console.error(error);
-    res.render('result2', {
-      errorMessage: '修改處方信息時出錯',
+    console.error("Error in POST /updatePrescription/:id :", error);
+    res.render("result2", {
+      errorMessage: "修改處方信息時出錯",
       message: null,
-      pid: null
+      pid: pid // Pass pid back even on error for context if available
     });
-  } finally {
-    await client.close();
-  }
+  } 
+  // No client.close() here, connection is managed centrally by dbManager
 });
 
 module.exports = router;
+

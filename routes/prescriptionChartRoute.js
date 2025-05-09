@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getDb } = require("../utils/database");
 const ARIMA = require("arima");
-const holtwinters = require("holtwinters"); // Assuming this is the correct package name
+const holtwinters = require("holtwinters");
 
 const parseDateYYYYMMDD = (yyyymmdd) => {
     if (!yyyymmdd || yyyymmdd.length !== 8) return null;
@@ -182,23 +182,26 @@ router.post("/api/forecast/holtwinters", async (req, res) => {
             return res.status(500).json({ error: "Holt-Winters library not loaded correctly." });
         }
 
-        const options = {
-            alpha: alpha !== undefined ? alpha : 0.5,
-            beta: beta !== undefined ? beta : 0.3,
-            gamma: gamma !== undefined ? gamma : 0.2,
-            period: period !== undefined ? period : 0, 
-            m: steps || 7 
-        };
-        console.log("Calling holtwinters with data:", data.slice(0, 5), "... (length:", data.length, ")");
-        console.log("Calling holtwinters with options:", options);
+        const pAlpha = alpha !== undefined ? alpha : 0.5;
+        const pBeta = beta !== undefined ? beta : 0.3;
+        const pGamma = gamma !== undefined ? gamma : 0.2;
+        const pPeriod = period !== undefined ? period : 0;
+        const pSteps = steps || 7;
 
-        const predictions = holtwinters(data, options);
+        console.log("Calling holtwinters with data (length):", data.length);
+        console.log(`Calling holtwinters(${pAlpha}, ${pBeta}, ${pGamma}, ${pPeriod}, ${pSteps})`);
+
+        // Corrected call to holtwinters: pass arguments directly
+        const predictions = holtwinters(data, pAlpha, pBeta, pGamma, pPeriod, pSteps);
         
         console.log("Holt-Winters Raw Predictions:", predictions);
 
         if (!predictions || !Array.isArray(predictions)) {
             console.error("Holt-Winters returned invalid predictions:", predictions);
-            return res.status(500).json({ error: "Holt-Winters forecast generated invalid results." });
+            // If predictions is an object with an 'augumentedDataset' and other stats, 
+            // it means the library might be returning more than just the forecast.
+            // For now, we assume it should return an array of forecasted values.
+            return res.status(500).json({ error: "Holt-Winters forecast generated invalid results. Expected an array." });
         }
 
         res.json({ predictions });

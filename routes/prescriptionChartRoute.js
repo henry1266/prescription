@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { getDb } = require("../utils/database");
 const ARIMA = require("arima");
-const holtwinters = require("holtwinters");
+const holtwinters = require("holtwinters"); // Assuming this is the correct package name
 
 const parseDateYYYYMMDD = (yyyymmdd) => {
     if (!yyyymmdd || yyyymmdd.length !== 8) return null;
@@ -36,7 +36,6 @@ const calculateEndDate = (predateStr, preday, precount) => {
     return endDate;
 };
 
-// Helper function to get daily counts from database
 async function getDailyCountsData(db) {
     const prescriptionsCollection = db.collection("prescriptions");
     const notes = await prescriptionsCollection
@@ -64,70 +63,52 @@ async function getDailyCountsData(db) {
     })).sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
-// Route to display the original chart page
 router.get("/", async (req, res) => {
     const db = getDb();
-    if (!db) {
-        return res.status(503).send("Database not connected");
-    }
+    if (!db) return res.status(503).send("Database not connected");
     const prescriptionsCollection = db.collection("prescriptions");
-
     try {
         const notes = await prescriptionsCollection
             .find({ pretype: "04" }, { projection: { pid: 1, predate: 1, preday: 1, precount: 1, _id: 0 } })
             .sort({ predate: 1 })
             .toArray();
-        
         const calendar = await getDailyCountsData(db);
-
         res.render("prescriptionChart", { notes, calendar });
-
     } catch (error) {
         console.error("Error fetching data for chart page:", error);
         res.status(500).send("Internal Server Error");
     }
 });
 
-// Route to display the new forecast analysis page
 router.get("/forecast", async (req, res) => {
     const db = getDb();
-    if (!db) {
-        return res.status(503).send("Database not connected");
-    }
+    if (!db) return res.status(503).send("Database not connected");
     try {
         const calendar = await getDailyCountsData(db);
-        res.render("forecastAnalysis", { calendar }); // Render the new EJS file
+        res.render("forecastAnalysis", { calendar });
     } catch (error) {
         console.error("Error fetching data for forecast analysis page:", error);
         res.status(500).send("Internal Server Error");
     }
 });
 
-
-// API endpoint for completed prescriptions
 router.get("/api/completed-prescriptions", async (req, res) => {
     const db = getDb();
-    if (!db) {
-        return res.status(503).send("Database not connected");
-    }
+    if (!db) return res.status(503).send("Database not connected");
     const prescriptionsCollection = db.collection("prescriptions");
     const { startDate, endDate } = req.query;
-
     const filterStartDate = startDate ? new Date(startDate + "T00:00:00Z") : null;
     const filterEndDate = endDate ? new Date(endDate + "T23:59:59Z") : null;
-
     if (!filterStartDate || !filterEndDate || isNaN(filterStartDate) || isNaN(filterEndDate)) {
         return res.status(400).json({ error: "Invalid or missing startDate or endDate. Use yyyy-mm-dd format." });
     }
     if (filterStartDate > filterEndDate) {
         return res.status(400).json({ error: "startDate cannot be after endDate." });
     }
-
     try {
         const allPrescriptions = await prescriptionsCollection
             .find({ pretype: "04" }, { projection: { pid: 1, predate: 1, preday: 1, precount: 1, _id: 0 } })
             .toArray();
-
         const candidates = [];
         for (const p of allPrescriptions) {
             const prescriptionEndDate = calculateEndDate(p.predate, p.preday, p.precount);
@@ -140,30 +121,21 @@ router.get("/api/completed-prescriptions", async (req, res) => {
                 });
             }
         }
-
         const finalResults = [];
         const checkedPids = new Set();
         const latestPredateByPid = {};
-
         for (const p of allPrescriptions) {
             if (!latestPredateByPid[p.pid] || p.predate > latestPredateByPid[p.pid]) {
                 latestPredateByPid[p.pid] = p.predate;
             }
         }
-
         for (const candidate of candidates) {
-            if (checkedPids.has(candidate.pid)) {
-                continue;
-            }
+            if (checkedPids.has(candidate.pid)) continue;
             if (latestPredateByPid[candidate.pid] === candidate.predate) {
-                finalResults.push({ 
-                    pid: candidate.pid, 
-                    endDate: candidate.endDateFormatted
-                });
+                finalResults.push({ pid: candidate.pid, endDate: candidate.endDateFormatted });
             }
             checkedPids.add(candidate.pid);
         }
-        
         finalResults.sort((a, b) => {
             if (a.endDate < b.endDate) return -1;
             if (a.endDate > b.endDate) return 1;
@@ -171,16 +143,13 @@ router.get("/api/completed-prescriptions", async (req, res) => {
             if (a.pid > b.pid) return 1;
             return 0;
         });
-
         res.json({ completedPrescriptions: finalResults });
-
     } catch (error) {
         console.error("Error fetching completed prescriptions:", error);
         res.status(500).send("Internal Server Error");
     }
 });
 
-// API endpoint for ARIMA forecast
 router.post("/api/forecast/arima", async (req, res) => {
     try {
         const { data, p, d, q, P, D, Q, s, steps } = req.body;
@@ -188,17 +157,12 @@ router.post("/api/forecast/arima", async (req, res) => {
             return res.status(400).json({ error: "Missing or invalid data for ARIMA forecast." });
         }
         const arima = new ARIMA({
-            p: p || 2,
-            d: d || 1,
-            q: q || 2,
-            P: P || 1,
-            D: D || 0,
-            Q: Q || 1,
-            s: s || 0, // Seasonality. Default to 0 if not provided, meaning non-seasonal ARIMA
-            verbose: false
+            p: p || 2, d: d || 1, q: q || 2,
+            P: P || 1, D: D || 0, Q: Q || 1,
+            s: s || 0, verbose: false
         });
         arima.train(data);
-        const [predictions, errors] = arima.predict(steps || 7); // Predict next 7 steps by default
+        const [predictions, errors] = arima.predict(steps || 7);
         res.json({ predictions, errors });
     } catch (error) {
         console.error("Error in ARIMA forecast:", error);
@@ -206,24 +170,41 @@ router.post("/api/forecast/arima", async (req, res) => {
     }
 });
 
-// API endpoint for Exponential Smoothing (Holt-Winters)
 router.post("/api/forecast/holtwinters", async (req, res) => {
     try {
         const { data, alpha, beta, gamma, period, steps } = req.body;
+        console.log("Holt-Winters Request Body:", req.body);
         if (!data || !Array.isArray(data) || data.length === 0) {
             return res.status(400).json({ error: "Missing or invalid data for Holt-Winters forecast." });
         }
-        // holtwinters library expects data, alpha, beta, gamma, period, m (steps)
-        const predictions = holtwinters(data, {
-            alpha: alpha || 0.5, // Default alpha
-            beta: beta || 0.3,   // Default beta (trend)
-            gamma: gamma || 0.2, // Default gamma (seasonality)
-            period: period || 0, // Seasonality period. 0 for non-seasonal.
-            m: steps || 7        // Number of steps to forecast
-        });
+        if (typeof holtwinters !== "function"){
+            console.error("holtwinters is not a function. Package might be imported incorrectly or not installed.");
+            return res.status(500).json({ error: "Holt-Winters library not loaded correctly." });
+        }
+
+        const options = {
+            alpha: alpha !== undefined ? alpha : 0.5,
+            beta: beta !== undefined ? beta : 0.3,
+            gamma: gamma !== undefined ? gamma : 0.2,
+            period: period !== undefined ? period : 0, 
+            m: steps || 7 
+        };
+        console.log("Calling holtwinters with data:", data.slice(0, 5), "... (length:", data.length, ")");
+        console.log("Calling holtwinters with options:", options);
+
+        const predictions = holtwinters(data, options);
+        
+        console.log("Holt-Winters Raw Predictions:", predictions);
+
+        if (!predictions || !Array.isArray(predictions)) {
+            console.error("Holt-Winters returned invalid predictions:", predictions);
+            return res.status(500).json({ error: "Holt-Winters forecast generated invalid results." });
+        }
+
         res.json({ predictions });
+
     } catch (error) {
-        console.error("Error in Holt-Winters forecast:", error);
+        console.error("Error in Holt-Winters forecast execution:", error);
         res.status(500).json({ error: "Failed to generate Holt-Winters forecast", details: error.message });
     }
 });

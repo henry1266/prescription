@@ -1,0 +1,45 @@
+/* 表格样式 */
+table {
+    border-collapse: collapse;
+    margin: 20px auto;
+    width: 60%; /* 表格宽度 */
+}
+th, td {
+    border: 1px solid #ddd;
+    padding: 3px;
+    text-align: center;
+}
+th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* 动态背景颜色 */
+.type-predate2 {
+    background-color: yellow;
+}
+.type-predate3 {
+    background-color: orange;
+}
+.green-bg {
+    background-color: green;
+    color: white; /* 字體顏色設置為白色 */
+}
+.yellow-bg {
+    background-color: rgb(214, 214, 33);
+    color: white; /* 字體顏色設置為白色 */
+}
+.red-bg {
+    background-color: red;
+    color: white; /* 字體顏色設置為白色 */
+}
+.gray-bg {
+    background-color: gray;
+    color: white; /* 字體顏色設置為白色 */
+}

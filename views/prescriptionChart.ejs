@@ -35,7 +35,7 @@
     </div>
 
     <h2>📈 每日有效處方筆數（多線折線圖）</h2>
-    <canvas id="calendarChart" width="600" height="230"></canvas>
+    <canvas id="calendarChart" style="display: block; width: 100%; height: 300px;"></canvas>
 
     <h2>📋 原始處方清單 (Pretype 04)</h2>
     <table border="1">
@@ -90,8 +90,11 @@ const calendarData = <%- typeof calendar !== 'undefined' ? JSON.stringify(calend
 const initialNotes = <%- typeof notes !== 'undefined' ? JSON.stringify(notes) : '[]' %>;
 
 // --- Chart Data Preparation ---
+console.log("Calendar Data for Chart:", calendarData);
 let labels = calendarData.map(entry => entry.date);
 let rawData = calendarData.map(entry => entry.count);
+console.log("Chart Labels:", labels);
+console.log("Chart Raw Data:", rawData);
 
 // --- Chart Helper Functions (Moving Average, Rolling Slope) ---
 function movingAverage(data, windowSize = 7) {

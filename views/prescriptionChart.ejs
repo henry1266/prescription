@@ -252,7 +252,7 @@ async function applyFilters() {
     try {
         // The API endpoint will be part of the main application, so the path might need adjustment.
         // For now, assuming it will be '/api/completed-prescriptions' relative to the main app's root.
-        const response = await fetch(`/api/completed-prescriptions?startDate=${startDateValue}&endDate=${endDateValue}`);
+        const response = await fetch(`/prescriptionChart/api/completed-prescriptions?startDate=${startDateValue}&endDate=${endDateValue}`);
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || `HTTP error! status: ${response.status}`);

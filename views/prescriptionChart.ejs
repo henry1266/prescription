@@ -28,16 +28,18 @@
     <input type="date" id="endDate">
     <button onclick="applyFilters()">篩選</button>
 
+    <h2>📈 每日有效處方筆數（多線折線圖）</h2>
+    <div style="position: relative; height:550px; width:100%">
+        <canvas id="calendarChart"></canvas>
+    </div>
+    
     <div id="completed-pids-container">
         <h2>📌 篩選期間內到期且為最後處方的記錄</h2>
         <div id="completed-pids-list">請點擊「篩選」按鈕以查詢。</div>
         <div id="completed-pids-error" class="error-message" style="display: none;"></div>
     </div>
 
-    <h2>📈 每日有效處方筆數（多線折線圖）</h2>
-    <div style="position: relative; height:400px; width:100%">
-        <canvas id="calendarChart"></canvas>
-    </div>
+
 
     <h2>📋 原始處方清單 (Pretype 04)</h2>
     <table border="1">
